@@ -1,463 +1,1617 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Blink Viewer · SPHEREx</title>
-<script src="https://cdn.tailwindcss.com/3.4.17"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script>
-tailwind.config = { theme: { extend: {
-  fontFamily: { sans: ['Manrope','system-ui','sans-serif'], mono: ['IBM Plex Mono','ui-monospace','monospace'] },
-  colors: { void: '#04060f', gold: '#e8b04a', ice: '#7fb3ff' }
-}}};
-</script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SPHEREx Blink Viewer — ESP-acio 32</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            display: ['Space Grotesk', 'Inter', 'sans-serif'],
+          },
+          colors: {
+            surface: '#F8F9FB',
+            canvas: '#FFFFFF',
+            border: '#E5E8EF',
+            muted: '#8A93A8',
+            accent: '#1A56DB',
+            'accent-soft': '#EEF2FF',
+            'accent-hover': '#1648C7',
+            ink: '#0D1117',
+            'ink-soft': '#3D4455',
+            nasa: '#0B3D91',
+            'nasa-red': '#FC3D21',
+          },
+          boxShadow: {
+            card: '0 1px 4px 0 rgba(13,17,23,0.06), 0 4px 24px 0 rgba(13,17,23,0.04)',
+            'card-hover': '0 4px 16px 0 rgba(13,17,23,0.10), 0 8px 40px 0 rgba(13,17,23,0.06)',
+            viewer: '0 0 0 1px rgba(13,17,23,0.08), 0 8px 32px 0 rgba(13,17,23,0.10)',
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #F8F9FB;
+      color: #0D1117;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Star Canvas ── */
+    #starCanvas {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.55;
+    }
+
+    /* ── Layout Shell ── */
+    .shell { position: relative; z-index: 1; }
+
+    /* ── Navbar ── */
+    .navbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(248,249,251,0.88);
+      backdrop-filter: blur(16px) saturate(180%);
+      -webkit-backdrop-filter: blur(16px) saturate(180%);
+      border-bottom: 1px solid #E5E8EF;
+    }
+
+    /* ── Tab System ── */
+    .tab-btn {
+      position: relative;
+      padding: 0.5rem 1.25rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: #8A93A8;
+      border-radius: 9999px;
+      transition: color 0.2s, background 0.2s;
+      cursor: pointer;
+      white-space: nowrap;
+      letter-spacing: 0.01em;
+      border: none;
+      background: none;
+    }
+    .tab-btn:hover { color: #0D1117; background: rgba(13,17,23,0.04); }
+    .tab-btn.active {
+      color: #1A56DB;
+      background: #EEF2FF;
+      font-weight: 600;
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Lang Toggle ── */
+    .lang-btn {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.25rem 0.625rem;
+      border-radius: 6px;
+      border: 1px solid #E5E8EF;
+      cursor: pointer;
+      transition: all 0.15s;
+      letter-spacing: 0.05em;
+      background: white;
+      color: #8A93A8;
+    }
+    .lang-btn.active {
+      background: #0D1117;
+      color: #fff;
+      border-color: #0D1117;
+    }
+    .lang-btn:not(.active):hover { border-color: #1A56DB; color: #1A56DB; }
+
+    /* ── Hero Section ── */
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: #EEF2FF;
+      border: 1px solid #C7D2FE;
+      color: #1A56DB;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.3rem 0.75rem;
+      border-radius: 9999px;
+    }
+    .hero-badge .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #1A56DB;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.75); }
+    }
+
+    /* ── CTA Button ── */
+    .cta-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #0D1117;
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.9375rem;
+      padding: 0.8125rem 2rem;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+      letter-spacing: 0.01em;
+      position: relative;
+      overflow: hidden;
+    }
+    .cta-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(26,86,219,0.15) 0%, transparent 60%);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .cta-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(13,17,23,0.2); }
+    .cta-btn:hover::before { opacity: 1; }
+    .cta-btn:active { transform: translateY(0); }
+
+    .cta-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: white;
+      color: #0D1117;
+      font-weight: 600;
+      font-size: 0.9375rem;
+      padding: 0.8125rem 2rem;
+      border-radius: 12px;
+      border: 1px solid #E5E8EF;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+    }
+    .cta-secondary:hover { border-color: #1A56DB; color: #1A56DB; transform: translateY(-2px); box-shadow: 0 4px 16px rgba(26,86,219,0.08); }
+
+    /* ── Feature Cards ── */
+    .feature-card {
+      background: white;
+      border: 1px solid #E5E8EF;
+      border-radius: 16px;
+      padding: 1.5rem;
+      transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+      cursor: default;
+    }
+    .feature-card:hover {
+      border-color: #C7D2FE;
+      box-shadow: 0 4px 16px rgba(26,86,219,0.08);
+      transform: translateY(-3px);
+    }
+    .feature-icon {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.25rem;
+      margin-bottom: 0.75rem;
+    }
+
+    /* ── Viewer Section ── */
+    .viewer-panel {
+      background: white;
+      border: 1px solid #E5E8EF;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(13,17,23,0.06), 0 8px 32px rgba(13,17,23,0.04);
+    }
+    .panel-header {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid #E5E8EF;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #FAFBFD;
+    }
+    .panel-header-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+    }
+
+    /* ── Custom Slider ── */
+    .custom-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 4px;
+      border-radius: 2px;
+      background: #E5E8EF;
+      outline: none;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .custom-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: #0D1117;
+      border: 2px solid white;
+      box-shadow: 0 1px 4px rgba(13,17,23,0.2);
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .custom-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+      box-shadow: 0 2px 8px rgba(13,17,23,0.3);
+    }
+    .custom-slider::-moz-range-thumb {
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: #0D1117;
+      border: 2px solid white;
+      box-shadow: 0 1px 4px rgba(13,17,23,0.2);
+      cursor: pointer;
+    }
+
+    /* ── Timeline slider ── */
+    #timeline {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 3px;
+      border-radius: 2px;
+      background: #E5E8EF;
+      outline: none;
+      cursor: pointer;
+    }
+    #timeline::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: white;
+      border: 2.5px solid #1A56DB;
+      box-shadow: 0 1px 6px rgba(26,86,219,0.3);
+      cursor: pointer;
+    }
+
+    /* ── Custom Checkbox ── */
+    .custom-check {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px; height: 18px;
+      border-radius: 5px;
+      border: 1.5px solid #D1D5E0;
+      background: white;
+      cursor: pointer;
+      transition: all 0.15s;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .custom-check:checked {
+      background: #0D1117;
+      border-color: #0D1117;
+    }
+    .custom-check:checked::after {
+      content: '';
+      position: absolute;
+      top: 2px; left: 5px;
+      width: 5px; height: 9px;
+      border: 2px solid white;
+      border-top: none;
+      border-left: none;
+      transform: rotate(45deg);
+    }
+    .custom-check:hover { border-color: #1A56DB; }
+
+    /* ── Load Button ── */
+    .load-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      background: #0D1117;
+      color: white;
+      font-weight: 600;
+      font-size: 0.8125rem;
+      padding: 0.6875rem 1rem;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.02em;
+    }
+    .load-btn:hover { background: #1A56DB; box-shadow: 0 4px 16px rgba(26,86,219,0.25); }
+    .load-btn:disabled { background: #8A93A8; cursor: not-allowed; box-shadow: none; }
+
+    /* ── Input Fields ── */
+    .coord-input {
+      width: 100%;
+      padding: 0.5625rem 0.75rem;
+      font-size: 0.8125rem;
+      font-family: 'Space Grotesk', monospace;
+      border: 1.5px solid #E5E8EF;
+      border-radius: 8px;
+      background: white;
+      color: #0D1117;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .coord-input:focus {
+      border-color: #1A56DB;
+      box-shadow: 0 0 0 3px rgba(26,86,219,0.08);
+    }
+    .coord-input::placeholder { color: #B8BFCC; }
+
+    /* ── Viewer Frame ── */
+    .viewer-wrapper {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1;
+      background: #0D1117;
+      overflow: hidden;
+    }
+    #blinkImg {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      image-rendering: pixelated;
+    }
+    .viewer-idle {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      color: rgba(255,255,255,0.4);
+      font-size: 0.8125rem;
+      pointer-events: none;
+    }
+    .viewer-idle svg { opacity: 0.3; }
+
+    /* ── Reticle Corners ── */
+    .reticle-corner {
+      position: absolute;
+      width: 20px; height: 20px;
+      border-color: rgba(26,86,219,0.7);
+      border-style: solid;
+      border-width: 0;
+      pointer-events: none;
+      z-index: 2;
+    }
+    .reticle-corner.tl { top: 10px; left: 10px; border-top-width: 2px; border-left-width: 2px; }
+    .reticle-corner.tr { top: 10px; right: 10px; border-top-width: 2px; border-right-width: 2px; }
+    .reticle-corner.bl { bottom: 10px; left: 10px; border-bottom-width: 2px; border-left-width: 2px; }
+    .reticle-corner.br { bottom: 10px; right: 10px; border-bottom-width: 2px; border-right-width: 2px; }
+    .crosshair-h, .crosshair-v {
+      position: absolute;
+      background: rgba(26,86,219,0.25);
+      pointer-events: none;
+      z-index: 2;
+    }
+    .crosshair-h { top: 50%; left: 20%; right: 20%; height: 1px; transform: translateY(-50%); }
+    .crosshair-v { left: 50%; top: 20%; bottom: 20%; width: 1px; transform: translateX(-50%); }
+
+    /* ── Play Button ── */
+    .play-btn {
+      display: flex; align-items: center; justify-content: center;
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: #1A56DB;
+      border: none;
+      cursor: pointer;
+      color: white;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .play-btn:hover { background: #1648C7; transform: scale(1.1); box-shadow: 0 4px 12px rgba(26,86,219,0.4); }
+    .play-btn:active { transform: scale(0.97); }
+
+    /* ── Status Badge ── */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      letter-spacing: 0.04em;
+    }
+    .status-badge.idle { background: #F3F4F6; color: #6B7280; }
+    .status-badge.loading { background: #FEF9C3; color: #854D0E; }
+    .status-badge.ready { background: #DCFCE7; color: #166534; }
+    .status-badge.error { background: #FEE2E2; color: #991B1B; }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .status-badge.loading .status-dot { animation: pulse-dot 1s ease-in-out infinite; }
+
+    /* ── Target Cards ── */
+    .target-card {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      border-radius: 12px;
+      border: 1px solid #E5E8EF;
+      background: white;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .target-card:hover {
+      border-color: #1A56DB;
+      background: #EEF2FF;
+      transform: translateX(3px);
+    }
+    .target-card.active {
+      border-color: #1A56DB;
+      background: #EEF2FF;
+    }
+    .target-icon {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      background: #F3F4F6;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+    .target-card:hover .target-icon, .target-card.active .target-icon {
+      background: #C7D2FE;
+    }
+    .target-name { font-size: 0.8125rem; font-weight: 600; color: #0D1117; line-height: 1.3; }
+    .target-type { font-size: 0.6875rem; color: #8A93A8; margin-top: 1px; }
+    .target-coords { font-size: 0.6875rem; font-family: 'Space Grotesk', monospace; color: #8A93A8; margin-top: 2px; }
+
+    /* ── Info Row ── */
+    .info-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #F3F4F6;
+      font-size: 0.75rem;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { color: #8A93A8; font-weight: 500; }
+    .info-value { color: #0D1117; font-weight: 600; font-family: 'Space Grotesk', monospace; }
+
+    /* ── Spinner ── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2.5px solid rgba(255,255,255,0.2);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+
+    /* ── Section Divider ── */
+    .section-label {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #8A93A8;
+      margin-bottom: 0.625rem;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      background: white;
+      border-top: 1px solid #E5E8EF;
+      padding: 1.5rem 2rem;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 1024px) {
+      .viewer-grid { grid-template-columns: 1fr !important; }
+    }
+
+    /* ── Smooth Tab Transitions ── */
+    .tab-panel { animation: fadeIn 0.25s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ── Scroll-snap hero ── */
+    .stat-number {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 2rem;
+      color: #0D1117;
+      line-height: 1;
+    }
+    .stat-label { font-size: 0.75rem; color: #8A93A8; margin-top: 0.25rem; }
+
+    /* ── Gradient Underline Heading ── */
+    .gradient-word {
+      background: linear-gradient(135deg, #1A56DB 0%, #7C3AED 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ── NASA Ribbon ── */
+    .nasa-ribbon {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #0B3D91;
+      color: white;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 0.25rem 0.75rem;
+      border-radius: 6px;
+    }
+
+    /* ── Loading overlay ── */
+    #loadingOverlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(13,17,23,0.85);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      z-index: 10;
+      color: white;
+      font-size: 0.8125rem;
+      border-radius: 0;
+    }
+    #loadingOverlay.visible { display: flex; }
+    .loading-ring {
+      width: 40px; height: 40px;
+      border: 3px solid rgba(255,255,255,0.15);
+      border-top-color: #1A56DB;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+  </style>
+</head> 
+<body>
+
+<!-- ══════════════════════════════════════════════
+     STAR CANVAS BACKGROUND
+══════════════════════════════════════════════ -->
+<canvas id="starCanvas"></canvas>
+
+<div class="shell">
+
+  <!-- ══════════════════════════════════════════════
+       NAVBAR
+  ══════════════════════════════════════════════ -->
+  <nav class="navbar">
+    <div class="max-w-screen-xl mx-auto px-4 sm:px-6 flex items-center justify-between h-14 gap-4">
+
+      <!-- Logo + Wordmark -->
+      <div class="flex items-center gap-3 flex-shrink-0">
+        <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#0B3D91,#1A56DB);display:flex;align-items:center;justify-content:center;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="3" fill="white"/>
+            <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2z" stroke="white" stroke-width="1.5" fill="none" stroke-dasharray="3 2"/>
+            <path d="M2 12h4M18 12h4M12 2v4M12 18v4" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="font-display font-700 text-sm text-ink leading-tight tracking-tight">SPHEREx <span class="text-accent">Blink Viewer</span></div>
+          <div class="text-muted" style="font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;">NASA Space Apps · ESP-acio 32</div>
+        </div>
+      </div>
+
+      <!-- Tab Navigation -->
+      <div class="flex items-center gap-1">
+        <button class="tab-btn active" id="tab-welcome" onclick="switchTab('welcome')">
+          <span data-en="Welcome" data-es="Bienvenida">Welcome</span>
+        </button>
+        <button class="tab-btn" id="tab-viewer" onclick="switchTab('viewer')">
+          <span data-en="Interactive Viewer" data-es="Visor Interactivo">Interactive Viewer</span>
+        </button>
+      </div>
+
+      <!-- Lang Toggle -->
+      <div class="flex items-center gap-1 flex-shrink-0">
+        <button class="lang-btn active" id="lang-en" onclick="setLang('en')">EN</button>
+        <button class="lang-btn" id="lang-es" onclick="setLang('es')">ES</button>
+      </div>
+
+    </div>
+  </nav>
+
+
+  <!-- ══════════════════════════════════════════════
+       TAB 1: WELCOME
+  ══════════════════════════════════════════════ -->
+  <div id="panel-welcome" class="tab-panel active">
+
+    <!-- Hero -->
+    <section class="max-w-screen-xl mx-auto px-4 sm:px-8 pt-20 pb-16">
+      <div class="max-w-3xl mx-auto text-center">
+
+        <div class="flex items-center justify-center gap-3 mb-6 flex-wrap">
+          <span class="hero-badge">
+            <span class="dot"></span>
+            <span data-en="NASA Space Apps Challenge 2024" data-es="NASA Space Apps Challenge 2024">NASA Space Apps Challenge 2024</span>
+          </span>
+          <span class="nasa-ribbon">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+            SPHEREx Mission · DR1
+          </span>
+        </div>
+
+        <h1 class="font-display font-700 text-ink mb-5 leading-tight" style="font-size:clamp(2rem,5vw,3.5rem);letter-spacing:-0.02em;">
+          <span data-en="Explore the" data-es="Explora el">Explore the</span><br/>
+          <span class="gradient-word" data-en="Infrared Universe" data-es="Universo Infrarrojo">Infrared Universe</span><br/>
+          <span data-en="One Blink at a Time" data-es="Un Parpadeo a la Vez">One Blink at a Time</span>
+        </h1>
+
+        <p class="text-ink-soft mb-8 max-w-2xl mx-auto leading-relaxed" style="font-size:1.0625rem;" data-en="SPHEREx Blink Viewer is a professional time-domain astronomy tool for the NASA Space Apps Challenge. Rapidly analyze transient objects, moving bodies, and variable stars across 102 near-infrared spectral bands from the SPHEREx satellite mission." data-es="SPHEREx Blink Viewer es una herramienta profesional de astronomía de dominio temporal para el NASA Space Apps Challenge. Analiza rápidamente objetos transitorios, cuerpos en movimiento y estrellas variables en 102 bandas espectrales del infrarrojo cercano de la misión SPHEREx.">
+          SPHEREx Blink Viewer is a professional time-domain astronomy tool for the NASA Space Apps Challenge. Rapidly analyze transient objects, moving bodies, and variable stars across 102 near-infrared spectral bands from the SPHEREx satellite mission.
+        </p>
+
+        <div class="flex flex-wrap items-center justify-center gap-3">
+          <button class="cta-btn" onclick="switchTab('viewer')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <span data-en="Launch Viewer" data-es="Abrir Visor">Launch Viewer</span>
+          </button>
+          <button class="cta-secondary" onclick="document.getElementById('problem').scrollIntoView({behavior:'smooth'})">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span data-en="Learn More" data-es="Saber Más">Learn More</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stats Bar -->
+    <div class="max-w-screen-xl mx-auto px-4 sm:px-8 pb-16">
+      <div class="bg-white border border-border rounded-2xl p-6 grid grid-cols-2 md:grid-cols-4 gap-6" style="box-shadow:0 1px 4px rgba(13,17,23,0.06);">
+        <div class="text-center">
+          <div class="stat-number">102</div>
+          <div class="stat-label" data-en="Spectral Bands" data-es="Bandas Espectrales">Spectral Bands</div>
+        </div>
+        <div class="text-center border-l border-border">
+          <div class="stat-number">450M+</div>
+          <div class="stat-label" data-en="Catalogued Objects" data-es="Objetos Catalogados">Catalogued Objects</div>
+        </div>
+        <div class="text-center border-l border-border">
+          <div class="stat-number">0.75–5μm</div>
+          <div class="stat-label" data-en="NIR Coverage" data-es="Cobertura NIR">NIR Coverage</div>
+        </div>
+        <div class="text-center border-l border-border">
+          <div class="stat-number">All-Sky</div>
+          <div class="stat-label" data-en="Survey Footprint" data-es="Huella de Barrido">Survey Footprint</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Problem Statement -->
+    <section id="problem" class="max-w-screen-xl mx-auto px-4 sm:px-8 pb-20">
+      <div class="text-center mb-12">
+        <div class="section-label" data-en="The Scientific Challenge" data-es="El Reto Científico">The Scientific Challenge</div>
+        <h2 class="font-display font-700 text-ink mb-4" style="font-size:clamp(1.5rem,3vw,2.25rem);letter-spacing:-0.015em;" data-en="Time-Domain Astronomy at Infrared Scale" data-es="Astronomía de Dominio Temporal a Escala Infrarroja">Time-Domain Astronomy at Infrared Scale</h2>
+        <p class="text-ink-soft max-w-2xl mx-auto leading-relaxed" data-en="Modern sky surveys generate terabytes of multi-epoch imagery. The challenge: efficiently detect and characterize moving, variable, or transient objects hidden within massive catalogs." data-es="Los barridos modernos del cielo generan terabytes de imágenes multi-época. El reto: detectar y caracterizar eficientemente objetos en movimiento, variables o transitorios ocultos en catálogos masivos.">
+          Modern sky surveys generate terabytes of multi-epoch imagery. The challenge: efficiently detect and characterize moving, variable, or transient objects hidden within massive catalogs.
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-5 mb-12">
+        <!-- Card 1 -->
+        <div class="feature-card">
+          <div class="feature-icon" style="background:#EEF2FF;">🌑</div>
+          <h3 class="font-display font-600 text-ink mb-2" style="font-size:1rem;" data-en="Cold Brown Dwarfs" data-es="Enanas Marrones Frías">Cold Brown Dwarfs</h3>
+          <p class="text-ink-soft text-sm leading-relaxed" data-en="Sub-stellar objects like WISE 0855 emit primarily in the mid-infrared. SPHEREx's NIR sensitivity enables unprecedented detection of these elusive cold worlds across all-sky epochs." data-es="Objetos subestelares como WISE 0855 emiten principalmente en el infrarrojo medio. La sensibilidad NIR de SPHEREx permite detectar estos mundos fríos a lo largo de múltiples épocas de barrido.">
+            Sub-stellar objects like WISE 0855 emit primarily in the mid-infrared. SPHEREx's NIR sensitivity enables unprecedented detection of these elusive cold worlds across all-sky epochs.
+          </p>
+        </div>
+        <!-- Card 2 -->
+        <div class="feature-card">
+          <div class="feature-icon" style="background:#F0FDF4;">💫</div>
+          <h3 class="font-display font-600 text-ink mb-2" style="font-size:1rem;" data-en="High Proper-Motion Stars" data-es="Estrellas de Alto Movimiento Propio">High Proper-Motion Stars</h3>
+          <p class="text-ink-soft text-sm leading-relaxed" data-en="Stars like Barnard's Star shift position measurably across epochs. Multi-epoch blink comparison is the gold standard technique for identifying these rapid movers within dense star fields." data-es="Estrellas como la Estrella de Barnard desplazan su posición de forma medible entre épocas. La comparación por parpadeo multi-época es la técnica estándar para identificar movimientos en campos estelares densos.">
+            Stars like Barnard's Star shift position measurably across epochs. Multi-epoch blink comparison is the gold standard technique for identifying these rapid movers within dense star fields.
+          </p>
+        </div>
+        <!-- Card 3 -->
+        <div class="feature-card">
+          <div class="feature-icon" style="background:#FFF7ED;">🔴</div>
+          <h3 class="font-display font-600 text-ink mb-2" style="font-size:1rem;" data-en="Variable & Young Stars" data-es="Estrellas Variables y Jóvenes">Variable & Young Stars</h3>
+          <p class="text-ink-soft text-sm leading-relaxed" data-en="T Tauri variables, Mira giants, and eruptive young stellar objects show dramatic brightness changes. The SPHEREx time baseline provides a new window into these stellar life-cycle events." data-es="Las variables T Tauri, gigantes Mira y objetos estelares jóvenes eruptivos muestran cambios dramáticos de brillo. La línea de tiempo de SPHEREx abre una nueva ventana hacia estos eventos del ciclo estelar.">
+            T Tauri variables, Mira giants, and eruptive young stellar objects show dramatic brightness changes. The SPHEREx time baseline provides a new window into these stellar life-cycle events.
+          </p>
+        </div>
+      </div>
+
+      <!-- SPHEREx Mission Block -->
+      <div class="bg-white border border-border rounded-2xl p-8" style="box-shadow:0 1px 4px rgba(13,17,23,0.06);">
+        <div class="grid md:grid-cols-2 gap-8 items-center">
+          <div>
+            <div class="section-label mb-3" data-en="About the Mission" data-es="Sobre la Misión">About the Mission</div>
+            <h3 class="font-display font-700 text-ink mb-3" style="font-size:1.375rem;letter-spacing:-0.01em;">SPHEREx — <span class="gradient-word">NASA's Cosmic Survey</span></h3>
+            <p class="text-ink-soft text-sm leading-relaxed mb-4" data-en="The Spectro-Photometer for the History of the Universe, Epoch of Reionization and Ices Explorer is NASA's newest wide-field infrared survey telescope. It maps the entire sky four times over two years, collecting spectra in 102 channels from 0.75 to 5 microns." data-es="El Espectro-Fotómetro para la Historia del Universo, Época de Reionización y Explorador de Hielos es el más reciente telescopio de barrido infrarrojo de campo amplio de la NASA. Mapea el cielo completo cuatro veces en dos años, recopilando espectros en 102 canales de 0.75 a 5 micrones.">
+              The Spectro-Photometer for the History of the Universe, Epoch of Reionization and Ices Explorer is NASA's newest wide-field infrared survey telescope. It maps the entire sky four times over two years, collecting spectra in 102 channels from 0.75 to 5 microns.
+            </p>
+            <div class="grid grid-cols-2 gap-3">
+              <div class="bg-surface rounded-xl p-3">
+                <div class="text-xs font-700 font-display text-ink mb-1">0.75 – 5 μm</div>
+                <div class="text-xs text-muted" data-en="Wavelength Range" data-es="Rango de Longitudes de Onda">Wavelength Range</div>
+              </div>
+              <div class="bg-surface rounded-xl p-3">
+                <div class="text-xs font-700 font-display text-ink mb-1">6.2° × 2°</div>
+                <div class="text-xs text-muted" data-en="Field of View" data-es="Campo de Visión">Field of View</div>
+              </div>
+              <div class="bg-surface rounded-xl p-3">
+                <div class="text-xs font-700 font-display text-ink mb-1">≥4× / 2 yr</div>
+                <div class="text-xs text-muted" data-en="Sky Coverage Cadence" data-es="Cadencia de Cobertura">Sky Coverage Cadence</div>
+              </div>
+              <div class="bg-surface rounded-xl p-3">
+                <div class="text-xs font-700 font-display text-ink mb-1">6.2″ / px</div>
+                <div class="text-xs text-muted" data-en="Pixel Scale" data-es="Escala de Píxel">Pixel Scale</div>
+              </div>
+            </div>
+          </div>
+          <div class="space-y-3">
+            <div class="text-sm font-600 text-ink mb-2" data-en="Our Solution" data-es="Nuestra Solución">Our Solution</div>
+            <div class="flex items-start gap-3">
+              <div style="width:28px;height:28px;border-radius:8px;background:#EEF2FF;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1A56DB" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <p class="text-sm text-ink-soft" data-en="FastAPI backend streams multi-epoch FITS frames directly from NASA/IRSA with asynchronous parallel processing" data-es="Backend FastAPI transmite marcos FITS multi-época directamente desde NASA/IRSA con procesamiento paralelo asíncrono">FastAPI backend streams multi-epoch FITS frames directly from NASA/IRSA with asynchronous parallel processing</p>
+            </div>
+            <div class="flex items-start gap-3">
+              <div style="width:28px;height:28px;border-radius:8px;background:#EEF2FF;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1A56DB" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <p class="text-sm text-ink-soft" data-en="Intelligent local cache system: pre-computed targets load instantly, new coordinates process live from IRSA SIA" data-es="Sistema de caché local inteligente: los objetivos pre-computados cargan al instante, las nuevas coordenadas se procesan en vivo desde IRSA SIA">Intelligent local cache system: pre-computed targets load instantly, new coordinates process live from IRSA SIA</p>
+            </div>
+            <div class="flex items-start gap-3">
+              <div style="width:28px;height:28px;border-radius:8px;background:#EEF2FF;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1A56DB" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <p class="text-sm text-ink-soft" data-en="Interactive blink comparator with adjustable playback speed, zoom, contrast, pixel inversion, and difference mode" data-es="Comparador de parpadeo interactivo con velocidad de reproducción, zoom, contraste, inversión de píxeles y modo diferencia ajustables">Interactive blink comparator with adjustable playback speed, zoom, contrast, pixel inversion, and difference mode</p>
+            </div>
+            <div class="flex items-start gap-3">
+              <div style="width:28px;height:28px;border-radius:8px;background:#EEF2FF;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1A56DB" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <p class="text-sm text-ink-soft" data-en="Pre-loaded science targets: cold brown dwarfs, high proper-motion stars, variable stars, galaxies" data-es="Objetivos científicos pre-cargados: enanas marrones frías, estrellas de alto movimiento propio, estrellas variables, galaxias">Pre-loaded science targets: cold brown dwarfs, high proper-motion stars, variable stars, galaxies</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom CTA -->
+      <div class="text-center mt-12">
+        <button class="cta-btn" onclick="switchTab('viewer')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <span data-en="Open the Interactive Viewer" data-es="Abrir el Visor Interactivo">Open the Interactive Viewer</span>
+        </button>
+      </div>
+    </section>
+
+  </div><!-- /panel-welcome -->
+
+
+  <!-- ══════════════════════════════════════════════
+       TAB 2: VIEWER
+  ══════════════════════════════════════════════ -->
+  <div id="panel-viewer" class="tab-panel">
+    <div class="max-w-screen-xl mx-auto px-4 sm:px-6 py-6">
+
+      <!-- Viewer Header -->
+      <div class="flex items-center justify-between mb-5 flex-wrap gap-3">
+        <div>
+          <h2 class="font-display font-700 text-ink" style="font-size:1.25rem;letter-spacing:-0.01em;" data-en="SPHEREx Interactive Blink Viewer" data-es="Visor Interactivo SPHEREx">SPHEREx Interactive Blink Viewer</h2>
+          <p class="text-muted text-xs mt-0.5" data-en="Multi-epoch near-infrared time-domain comparator · NASA/IPAC Infrared Science Archive" data-es="Comparador de dominio temporal multi-época NIR · NASA/IPAC Infrared Science Archive">Multi-epoch near-infrared time-domain comparator · NASA/IPAC Infrared Science Archive</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <div id="status" class="status-badge idle">
+            <span class="status-dot"></span>
+            <span data-en="Ready" data-es="Listo">Ready</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3-Column Grid -->
+      <div class="grid gap-5 viewer-grid" style="grid-template-columns:240px 1fr 220px;align-items:start;">
+
+        <!-- ── LEFT PANEL: Controls ── -->
+        <div class="viewer-panel">
+          <div class="panel-header">
+            <div class="panel-header-dot" style="background:#FC3D21;"></div>
+            <div class="panel-header-dot" style="background:#FBB723;"></div>
+            <div class="panel-header-dot" style="background:#2CBF44;"></div>
+            <span class="text-muted ml-1 font-600" style="font-size:0.6875rem;letter-spacing:0.06em;text-transform:uppercase;" data-en="Controls" data-es="Controles">Controls</span>
+          </div>
+          <div class="p-4 space-y-5">
+
+            <!-- Speed -->
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <label class="section-label mb-0" for="speedSlider" data-en="Blink Speed" data-es="Velocidad de Parpadeo">Blink Speed</label>
+                <span id="speedLbl" class="text-xs font-700 font-display text-accent">5</span>
+              </div>
+              <input type="range" id="speedSlider" class="custom-slider" min="1" max="10" value="5"
+                oninput="document.getElementById('speedLbl').textContent=this.value" />
+              <div class="flex justify-between text-muted mt-1" style="font-size:0.625rem;">
+                <span data-en="Slow" data-es="Lento">Slow</span>
+                <span data-en="Fast" data-es="Rápido">Fast</span>
+              </div>
+            </div>
+
+            <!-- Zoom -->
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <label class="section-label mb-0" for="zoomSlider" data-en="Zoom" data-es="Zoom">Zoom</label>
+                <span id="zoomLbl" class="text-xs font-700 font-display text-accent">1.0×</span>
+              </div>
+              <input type="range" id="zoomSlider" class="custom-slider" min="0.5" max="4" step="0.1" value="1.0"
+                oninput="document.getElementById('zoomLbl').textContent=parseFloat(this.value).toFixed(1)+'×'; applyFilters();" />
+              <div class="flex justify-between text-muted mt-1" style="font-size:0.625rem;">
+                <span>0.5×</span>
+                <span>4×</span>
+              </div>
+            </div>
+
+            <!-- Contrast -->
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <label class="section-label mb-0" for="contrastSlider" data-en="Contrast" data-es="Contraste">Contrast</label>
+                <span id="contrastLbl" class="text-xs font-700 font-display text-accent">100%</span>
+              </div>
+              <input type="range" id="contrastSlider" class="custom-slider" min="50" max="300" value="100"
+                oninput="document.getElementById('contrastLbl').textContent=this.value+'%'; applyFilters();" />
+              <div class="flex justify-between text-muted mt-1" style="font-size:0.625rem;">
+                <span>50%</span>
+                <span>300%</span>
+              </div>
+            </div>
+
+            <!-- Divider -->
+            <div class="border-t border-border"></div>
+
+            <!-- Checkboxes -->
+            <div class="space-y-3">
+              <div class="section-label" data-en="Image Modes" data-es="Modos de Imagen">Image Modes</div>
+              <label class="flex items-center gap-3 cursor-pointer group">
+                <input type="checkbox" id="invertCheck" class="custom-check" onchange="applyFilters()" />
+                <div>
+                  <div class="text-sm font-500 text-ink group-hover:text-accent transition-colors" data-en="Invert Pixels" data-es="Invertir Píxeles">Invert Pixels</div>
+                  <div class="text-muted" style="font-size:0.6875rem;" data-en="Negative image mode" data-es="Modo imagen negativa">Negative image mode</div>
+                </div>
+              </label>
+              <label class="flex items-center gap-3 cursor-pointer group">
+                <input type="checkbox" id="diffCheck" class="custom-check" onchange="toggleDifference()" />
+                <div>
+                  <div class="text-sm font-500 text-ink group-hover:text-accent transition-colors" data-en="Difference Mode" data-es="Modo Diferencia">Difference Mode</div>
+                  <div class="text-muted" style="font-size:0.6875rem;" data-en="Highlight frame changes" data-es="Resaltar cambios entre marcos">Highlight frame changes</div>
+                </div>
+              </label>
+            </div>
+
+            <!-- Divider -->
+            <div class="border-t border-border"></div>
+
+            <!-- Info Section -->
+            <div class="space-y-0">
+              <div class="section-label" data-en="Session Info" data-es="Info de Sesión">Session Info</div>
+              <div class="info-row">
+                <span class="info-label" data-en="Frames" data-es="Marcos">Frames</span>
+                <span id="frameInfo" class="info-value">—</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label" data-en="Source" data-es="Fuente">Source</span>
+                <span id="sourceInfo" class="info-value" style="font-size:0.6875rem;">—</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ── CENTER PANEL: Viewer ── -->
+        <div class="viewer-panel flex flex-col">
+          <div class="panel-header">
+            <div class="panel-header-dot" style="background:#FC3D21;"></div>
+            <div class="panel-header-dot" style="background:#FBB723;"></div>
+            <div class="panel-header-dot" style="background:#2CBF44;"></div>
+            <span class="text-muted ml-1 font-600" style="font-size:0.6875rem;letter-spacing:0.06em;text-transform:uppercase;" data-en="Sky Region Viewer" data-es="Visor de Región Celeste">Sky Region Viewer</span>
+            <div class="ml-auto flex items-center gap-1.5">
+              <span class="text-muted" style="font-size:0.6875rem;">ICRS J2000</span>
+              <div style="width:1px;height:12px;background:#E5E8EF;"></div>
+              <span class="text-muted" style="font-size:0.6875rem;">SPHEREx DR1</span>
+            </div>
+          </div>
+
+          <!-- Coordinate Inputs -->
+          <div class="p-4 border-b border-border">
+            <div class="grid grid-cols-2 gap-3 mb-3">
+              <div>
+                <label class="block mb-1.5" style="font-size:0.6875rem;font-weight:600;color:#8A93A8;letter-spacing:0.06em;text-transform:uppercase;" data-en="Right Ascension (°)" data-es="Ascensión Recta (°)">Right Ascension (°)</label>
+                <input type="number" id="ra" class="coord-input" placeholder="e.g. 133.796" step="0.001" />
+              </div>
+              <div>
+                <label class="block mb-1.5" style="font-size:0.6875rem;font-weight:600;color:#8A93A8;letter-spacing:0.06em;text-transform:uppercase;" data-en="Declination (°)" data-es="Declinación (°)">Declination (°)</label>
+                <input type="number" id="dec" class="coord-input" placeholder="e.g. -7.245" step="0.001" />
+              </div>
+            </div>
+            <button class="load-btn" onclick="loadTarget()" id="loadBtn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <span data-en="Load Sky Region" data-es="Cargar Región Celeste">Load Sky Region</span>
+            </button>
+          </div>
+
+          <!-- Image Viewer -->
+          <div class="viewer-wrapper" style="border-radius:0;">
+            <!-- Reticle -->
+            <div class="reticle-corner tl"></div>
+            <div class="reticle-corner tr"></div>
+            <div class="reticle-corner bl"></div>
+            <div class="reticle-corner br"></div>
+            <div class="crosshair-h" id="crossH"></div>
+            <div class="crosshair-v" id="crossV"></div>
+
+            <!-- The Blink Image -->
+            <img id="blinkImg" src="" alt="" style="display:none;" />
+
+            <!-- Idle Placeholder -->
+            <div class="viewer-idle" id="viewerIdle">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+              <span data-en="Enter coordinates and load a sky region" data-es="Ingresa coordenadas y carga una región celeste">Enter coordinates and load a sky region</span>
+              <span style="font-size:0.6875rem;opacity:0.7;" data-en="or select a preset target from the right panel" data-es="o selecciona un objetivo preestablecido del panel derecho">or select a preset target from the right panel</span>
+            </div>
+
+            <!-- Loading Overlay -->
+            <div id="loadingOverlay">
+              <div class="loading-ring"></div>
+              <span id="loadingMsg" data-en="Querying NASA/IRSA Archive…" data-es="Consultando Archivo NASA/IRSA…">Querying NASA/IRSA Archive…</span>
+            </div>
+          </div>
+
+          <!-- Playback Controls -->
+          <div class="p-4 border-t border-border">
+            <div class="flex items-center gap-3 mb-3">
+              <button id="playBtn" class="play-btn" onclick="togglePlay()" disabled>
+                <svg id="playIcon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              </button>
+              <div class="flex-1">
+                <input type="range" id="timeline" min="0" max="0" value="0" onchange="onTimelineChange(this.value)" />
+              </div>
+              <span id="timelineLabel" style="font-size:0.6875rem;font-family:'Space Grotesk',monospace;color:#8A93A8;white-space:nowrap;min-width:36px;text-align:right;">0 / 0</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+              <div class="bg-surface rounded-lg p-2 text-center">
+                <div class="text-muted" style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.08em;font-weight:600;" data-en="Status" data-es="Estado">Status</div>
+                <div id="statusInline" style="font-size:0.75rem;font-weight:600;color:#0D1117;margin-top:2px;">—</div>
+              </div>
+              <div class="bg-surface rounded-lg p-2 text-center">
+                <div class="text-muted" style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.08em;font-weight:600;" data-en="Current Epoch" data-es="Época Actual">Current Epoch</div>
+                <div id="epochDisplay" style="font-size:0.75rem;font-weight:600;color:#0D1117;font-family:'Space Grotesk',monospace;margin-top:2px;">—</div>
+              </div>
+              <div class="bg-surface rounded-lg p-2 text-center">
+                <div class="text-muted" style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.08em;font-weight:600;" data-en="Data Source" data-es="Fuente de Datos">Data Source</div>
+                <div id="sourceDisplay" style="font-size:0.75rem;font-weight:600;color:#0D1117;margin-top:2px;">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── RIGHT PANEL: Targets ── -->
+        <div class="viewer-panel">
+          <div class="panel-header">
+            <div class="panel-header-dot" style="background:#FC3D21;"></div>
+            <div class="panel-header-dot" style="background:#FBB723;"></div>
+            <div class="panel-header-dot" style="background:#2CBF44;"></div>
+            <span class="text-muted ml-1 font-600" style="font-size:0.6875rem;letter-spacing:0.06em;text-transform:uppercase;" data-en="Science Targets" data-es="Objetivos Científicos">Science Targets</span>
+          </div>
+          <div class="p-3 space-y-2">
+            <p class="text-muted mb-3" style="font-size:0.6875rem;" data-en="Click a target to load instantly" data-es="Haz clic en un objetivo para cargar al instante">Click a target to load instantly</p>
+
+            <!-- Target Cards -->
+            <div class="target-card" onclick="setPreset(133.796, -7.245); setActiveTarget(this)">
+              <div class="target-icon">🌑</div>
+              <div>
+                <div class="target-name">WISE 0855</div>
+                <div class="target-type" data-en="Cold brown dwarf" data-es="Enana marrón fría">Cold brown dwarf</div>
+                <div class="target-coords">RA 133.796 / Dec −7.245</div>
+              </div>
+            </div>
+
+            <div class="target-card" onclick="setPreset(210.802, 54.348); setActiveTarget(this)">
+              <div class="target-icon">🌀</div>
+              <div>
+                <div class="target-name">M101 Galaxy</div>
+                <div class="target-type" data-en="Spiral galaxy" data-es="Galaxia espiral">Spiral galaxy</div>
+                <div class="target-coords">RA 210.802 / Dec 54.348</div>
+              </div>
+            </div>
+
+            <div class="target-card" onclick="setPreset(133.797, -7.245); setActiveTarget(this)">
+              <div class="target-icon">⭐</div>
+              <div>
+                <div class="target-name">Object 1 (D2)</div>
+                <div class="target-type" data-en="Variable candidate" data-es="Candidato variable">Variable candidate</div>
+                <div class="target-coords">RA 133.797 / Dec −7.245</div>
+              </div>
+            </div>
+
+            <div class="target-card" onclick="setPreset(269.452, 4.693); setActiveTarget(this)">
+              <div class="target-icon">🔴</div>
+              <div>
+                <div class="target-name">Barnard's Star</div>
+                <div class="target-type" data-en="High proper motion red dwarf" data-es="Enana roja de alto movimiento">High proper motion red dwarf</div>
+                <div class="target-coords">RA 269.452 / Dec 4.693</div>
+              </div>
+            </div>
+
+            <div class="target-card" onclick="setPreset(330.840, -56.787); setActiveTarget(this)">
+              <div class="target-icon">🟤</div>
+              <div>
+                <div class="target-name">Epsilon Indi B</div>
+                <div class="target-type" data-en="Nearby brown dwarf" data-es="Enana marrón cercana">Nearby brown dwarf</div>
+                <div class="target-coords">RA 330.840 / Dec −56.787</div>
+              </div>
+            </div>
+
+            <div class="target-card" onclick="setPreset(76.558, 30.401); setActiveTarget(this)">
+              <div class="target-icon">💥</div>
+              <div>
+                <div class="target-name">RW Aurigae</div>
+                <div class="target-type" data-en="Young variable star" data-es="Estrella variable joven">Young variable star</div>
+                <div class="target-coords">RA 76.558 / Dec 30.401</div>
+              </div>
+            </div>
+
+            <div class="target-card" onclick="setPreset(304.693, 42.443); setActiveTarget(this)">
+              <div class="target-icon">❤️</div>
+              <div>
+                <div class="target-name">R Draconis</div>
+                <div class="target-type" data-en="Mira-type red giant" data-es="Gigante roja tipo Mira">Mira-type red giant</div>
+                <div class="target-coords">RA 304.693 / Dec 42.443</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div><!-- /viewer-grid -->
+    </div>
+  </div><!-- /panel-viewer -->
+
+
+  <!-- ══════════════════════════════════════════════
+       FOOTER
+  ══════════════════════════════════════════════ -->
+  <footer class="footer mt-auto">
+    <div class="max-w-screen-xl mx-auto text-center space-y-2">
+      <p class="text-muted leading-relaxed" style="font-size:0.6875rem;max-width:72ch;margin:0 auto;">
+        This publication makes use of data products from the Spectro-Photometer for the History of the Universe, Epoch of Reionization and Ices Explorer (SPHEREx), which is a joint project of the Jet Propulsion Laboratory and the California Institute of Technology, and is funded by the National Aeronautics and Space Administration.
+      </p>
+      <p class="font-600 text-ink-soft" style="font-size:0.75rem;">
+        Author: <span class="text-accent">ESP-acio 32</span> &nbsp;·&nbsp; NASA Space Apps Challenge
+      </p>
+    </div>
+  </footer>
+
+</div><!-- /shell -->
+
+<!-- ═══════════════════════════════════════════════════════════
+     ZOOM CON PANEO + PARTÍCULAS EXTRA
+     Pegar tal cual, justo antes de </body> (después de tu <script>).
+     No modifica ningún otro código de tu archivo.
+════════════════════════════════════════════════════════════ -->
 <style>
-  :root { --gold:#e8b04a; --ice:#7fb3ff; --line:rgba(160,185,255,.14); --glass:rgba(14,19,38,.62); }
-  html, body { min-height: 100%; }
-  body {
-    background:
-      radial-gradient(1.2px 1.2px at 12% 18%, #fff9 50%, transparent 52%),
-      radial-gradient(1px 1px at 78% 8%, #fff8 50%, transparent 52%),
-      radial-gradient(1.4px 1.4px at 44% 62%, #fff7 50%, transparent 52%),
-      radial-gradient(1px 1px at 90% 74%, #fff8 50%, transparent 52%),
-      radial-gradient(1px 1px at 23% 88%, #fff7 50%, transparent 52%),
-      radial-gradient(ellipse 60% 40% at 85% -5%, rgba(232,176,74,.13), transparent 70%),
-      radial-gradient(ellipse 70% 50% at 0% 100%, rgba(80,110,255,.14), transparent 70%),
-      #04060f;
-    background-attachment: fixed;
-    color: #d6def5;
-  }
-  .glass { background: var(--glass); border: 1px solid var(--line); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 20px 50px -25px #000; }
-  .panel-title { font-weight: 800; font-size: 1rem; color: #fff; letter-spacing: -.01em; }
-  .hint { font-size: .75rem; color: #8493bd; }
-
-  /* Sliders */
-  input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 22px; background: transparent; cursor: pointer; --p: 50%; }
-  input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 9px; background: linear-gradient(90deg, var(--gold) var(--p), rgba(160,185,255,.18) var(--p)); }
-  input[type=range]::-moz-range-track { height: 4px; border-radius: 9px; background: rgba(160,185,255,.18); }
-  input[type=range]::-moz-range-progress { height: 4px; border-radius: 9px; background: var(--gold); }
-  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; margin-top: -6px; border-radius: 50%; background: #0a0f20; border: 2px solid var(--gold); box-shadow: 0 0 0 4px rgba(232,176,74,.12); transition: box-shadow .15s; }
-  input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: #0a0f20; border: 2px solid var(--gold); }
-  input[type=range]:hover::-webkit-slider-thumb { box-shadow: 0 0 0 7px rgba(232,176,74,.18); }
-  input[type=range]:focus-visible { outline: 2px solid var(--ice); outline-offset: 3px; border-radius: 6px; }
-
-  /* Checkboxes */
-  .chk { display:flex; align-items:center; gap:.75rem; padding:.7rem .8rem; border:1px solid var(--line); border-radius:10px; cursor:pointer; transition: border-color .15s, background .15s; }
-  .chk:hover { border-color: rgba(232,176,74,.5); background: rgba(232,176,74,.04); }
-  .chk input { -webkit-appearance:none; appearance:none; flex:none; width:18px; height:18px; border-radius:5px; border:1.5px solid #5d6b94; background:transparent; display:grid; place-items:center; cursor:pointer; transition:.15s; }
-  .chk input::after { content:""; width:9px; height:5px; border-left:2px solid #1a1203; border-bottom:2px solid #1a1203; transform: translateY(-1px) rotate(-45deg) scale(0); transition: transform .12s; }
-  .chk input:checked { background: var(--gold); border-color: var(--gold); }
-  .chk input:checked::after { transform: translateY(-1px) rotate(-45deg) scale(1); }
-  .chk input:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; }
-
-  /* Coordinate fields */
-  .field { width:100%; background: rgba(4,6,15,.7); border:1px solid var(--line); border-radius:10px; padding:.65rem .85rem; font-family:'IBM Plex Mono',monospace; font-size:.95rem; color:#fff; transition:.15s; }
-  .field:focus { outline:none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(232,176,74,.18); }
-
-  /* Primary button */
-  .cta { position:relative; overflow:hidden; border-radius:10px; padding:.7rem 1.4rem; font-weight:800; color:#1a1203; background: linear-gradient(135deg,#f6cf7a,#e8b04a 55%,#c98a22); box-shadow: 0 8px 24px -8px rgba(232,176,74,.55); transition: transform .15s, box-shadow .15s; cursor: pointer; }
-  .cta::after { content:""; position:absolute; inset:0; background: linear-gradient(110deg, transparent 35%, rgba(255,255,255,.55) 50%, transparent 65%); transform: translateX(-120%); transition: transform .6s; }
-  .cta:hover { transform: translateY(-2px); box-shadow: 0 14px 30px -8px rgba(232,176,74,.7); }
-  .cta:hover::after { transform: translateX(120%); }
-
-  /* Viewer */
-  .viewer { position:relative; aspect-ratio:1/1; width:100%; max-width:640px; margin-inline:auto; background:#000; border:1px solid var(--line); border-radius:14px; overflow:hidden; box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 30px 80px -30px rgba(80,110,255,.45), inset 0 0 60px rgba(0,0,0,.9); }
-  .viewer #blinkImg { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; z-index:1; transform-origin:center; }
-  .corner { position:absolute; width:22px; height:22px; z-index:3; border-color: var(--gold); opacity:.85; pointer-events:none; }
-  .corner.tl { top:10px; left:10px; border-top:2px solid; border-left:2px solid; }
-  .corner.tr { top:10px; right:10px; border-top:2px solid; border-right:2px solid; }
-  .corner.bl { bottom:10px; left:10px; border-bottom:2px solid; border-left:2px solid; }
-  .corner.br { bottom:10px; right:10px; border-bottom:2px solid; border-right:2px solid; }
-  .reticle { position:absolute; inset:0; z-index:2; pointer-events:none; }
-  .reticle::before, .reticle::after { content:""; position:absolute; background: rgba(232,176,74,.35); }
-  .reticle::before { left:50%; top:calc(50% - 22px); width:1px; height:14px; box-shadow: 0 30px 0 rgba(232,176,74,.35); }
-  .reticle::after { top:50%; left:calc(50% - 22px); height:1px; width:14px; box-shadow: 30px 0 0 rgba(232,176,74,.35); }
-  .empty { position:absolute; inset:0; z-index:0; display:grid; place-content:center; gap:.4rem; text-align:center; color:#6b79a3; font-size:.85rem; }
-
-  /* Play button */
-  #playBtn { position:relative; flex:none; min-width:48px; height:48px; padding:0 .9rem; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; gap:.4rem; font-weight:800; font-size:.9rem; color:#1a1203; background: linear-gradient(135deg,#f6cf7a,#e8b04a); transition: transform .15s, box-shadow .15s; box-shadow: 0 6px 20px -6px rgba(232,176,74,.7); cursor: pointer; }
-  #playBtn:hover { transform: scale(1.06); }
-
-  /* Status */
-  .stat { display:flex; flex-direction:column; gap:.2rem; padding:.65rem .85rem; border:1px solid var(--line); border-radius:10px; background: rgba(4,6,15,.45); min-width:0; }
-  .stat .k { font-size:.7rem; color:#7482ac; }
-  .stat .v { font-family:'IBM Plex Mono',monospace; font-size:.85rem; color:#fff; overflow-wrap:anywhere; }
-  .dot { display:inline-block; width:7px; height:7px; margin-right:.45rem; border-radius:50%; background:#4ade80; box-shadow:0 0 8px #4ade80; animation: blink 2.4s ease-in-out infinite; }
-  @keyframes blink { 50% { opacity:.35; } }
-
-  /* Presets */
-  .preset { width:100%; text-align:left; display:flex; flex-direction:column; gap:.15rem; padding:.7rem .9rem; border:1px solid var(--line); border-left:3px solid transparent; border-radius:10px; background: rgba(4,6,15,.4); transition:.15s; cursor:pointer; }
-  .preset:hover { border-color: rgba(232,176,74,.45); border-left-color: var(--gold); background: rgba(232,176,74,.06); transform: translateX(3px); }
-  .preset .pn { font-weight:600; color:#fff; font-size:.92rem; }
-  .preset .pt { font-size:.72rem; color:var(--ice); }
-  .preset .pc { font-family:'IBM Plex Mono',monospace; font-size:.72rem; color:#7482ac; }
-
-  .tab { padding:.5rem .9rem; border-radius:8px; font-weight:600; font-size:.875rem; color:#8d9bc4; border-bottom:2px solid transparent; transition:.15s; cursor: pointer; }
-  .tab:hover { color:#fff; }
-  .tab[aria-selected=true] { color:#fff; border-bottom-color:var(--gold); background:rgba(232,176,74,.08); }
-  .lang { display:inline-flex; border:1px solid var(--line); border-radius:999px; padding:2px; }
-  .lang button { padding:.3rem .8rem; border-radius:999px; font-size:.78rem; font-weight:800; color:#8d9bc4; transition:.15s; cursor: pointer; }
-  .lang button[aria-pressed=true] { background:var(--gold); color:#1a1203; }
-  .wh1 { font-weight:800; letter-spacing:-.03em; line-height:1.02; font-size:clamp(2.2rem,6vw,4.4rem); color:#fff; }
-  .wcard h3 { font-weight:800; color:#fff; font-size:1.05rem; margin-bottom:.6rem; }
-  .wcard p, .wcard li { font-size:.9rem; line-height:1.6; color:#aab6d8; }
-  .steps { counter-reset:s; list-style:none; padding:0; display:grid; gap:.7rem; }
-  .steps li { counter-increment:s; display:flex; gap:.75rem; }
-  .steps li::before { content:counter(s); flex:none; width:24px; height:24px; border-radius:50%; border:1px solid var(--gold); color:var(--gold); display:grid; place-items:center; font:500 .75rem 'IBM Plex Mono',monospace; }
-  .goals { list-style:none; padding:0; display:grid; gap:.7rem; }
-  .goals li { padding-left:1rem; border-left:2px solid var(--gold); }
+  .viewer-wrapper { touch-action: none; user-select: none; }
+  .viewer-wrapper.zoomed { cursor: grab; }
+  .viewer-wrapper.drag { cursor: grabbing; }
+  #vStage { position: absolute; inset: 0; transform-origin: 0 0; will-change: transform; }
+  #blinkImg { pointer-events: none; -webkit-user-drag: none; }
+  #starCanvas2 { position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: 0.55; }
 </style>
-</head>
-<body class="font-sans antialiased min-h-screen flex flex-col">
+<canvas id="starCanvas2" aria-hidden="true"></canvas>
 
-<!-- Header -->
-<header class="border-b border-white/10 bg-void/60 backdrop-blur">
-  <div class="mx-auto max-w-[1500px] px-4 lg:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
-    <div class="flex items-center gap-3">
-      <svg width="34" height="34" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-        <polygon points="20,3 33,10.5 33,25.5 20,33 7,25.5 7,10.5" stroke="#e8b04a" stroke-width="1.5"/>
-        <polygon points="20,10 27,14 27,22 20,26 13,22 13,14" fill="#e8b04a" fill-opacity=".18" stroke="#e8b04a" stroke-width="1"/>
-        <circle cx="20" cy="18" r="2.4" fill="#fff"/>
-      </svg>
-      <div>
-        <h1 class="text-lg font-extrabold text-white leading-none">Blink Viewer</h1>
-        <p class="text-xs text-slate-400 mt-1" data-i18n="sub">Explorador de series temporales de SPHEREx</p>
-      </div>
-    </div>
-    <div class="flex items-center gap-3 flex-wrap">
-      <nav class="flex gap-1" role="tablist">
-        <button type="button" class="tab" role="tab" data-tab="welcome" aria-selected="true" data-i18n="nav_w">Bienvenida</button>
-        <button type="button" class="tab" role="tab" data-tab="viewer" aria-selected="false" data-i18n="nav_v">Visor</button>
-      </nav>
-      <div class="lang" role="group" aria-label="Idioma / Language"><button type="button" data-lang="es" aria-pressed="true">ES</button><button type="button" data-lang="en" aria-pressed="false">EN</button></div>
-    </div>
-  </div>
-</header>
-
-<!-- Pestaña Bienvenida -->
-<section id="tab-welcome" class="mx-auto w-full max-w-[1500px] px-4 lg:px-6 py-8 flex-1 space-y-5">
-  <div class="glass rounded-2xl p-6 sm:p-10 relative overflow-hidden">
-    <p class="text-sm text-gold font-semibold mb-4">NASA Space Apps Challenge · SPHEREx</p>
-    <h2 class="wh1 max-w-3xl" data-i18n="w_h">Mira el cielo cambiar</h2>
-    <p class="mt-5 max-w-2xl text-slate-300 leading-relaxed" data-i18n="w_p">Blink Viewer compara imágenes de la misma región del cielo tomadas en distintas épocas por la misión SPHEREx de la NASA. Al alternarlas rápidamente, lo que se mueve o varía destaca a simple vista.</p>
-    <div class="mt-7 flex flex-wrap items-center gap-5">
-      <button type="button" class="cta" data-go="viewer" data-i18n="w_cta">Abrir el visor</button>
-      <div class="flex items-center gap-3">
-        <span class="text-sm text-slate-400" data-i18n="w_lang">Idioma de la interfaz</span>
-        <div class="lang" role="group" aria-label="Idioma / Language"><button type="button" data-lang="es" aria-pressed="true">Español</button><button type="button" data-lang="en" aria-pressed="false">English</button></div>
-      </div>
-    </div>
-  </div>
-  <div class="grid gap-5 md:grid-cols-3">
-    <article class="glass wcard rounded-2xl p-6"><h3 data-i18n="a_t">Sobre el proyecto</h3><p data-i18n="a_p">SPHEREx es un telescopio espacial de la NASA que mapea todo el cielo en 102 colores del infrarrojo cercano (0,75 a 5 micras). Cada región se observa varias veces, lo que genera series temporales: una película lenta del cielo. Este proyecto las convierte en una herramienta interactiva, inspirada en WiseView, para explorarlas desde el navegador.</p></article>
-    <article class="glass wcard rounded-2xl p-6"><h3 data-i18n="g_t">Qué queremos lograr</h3><ul class="goals">
-      <li data-i18n="g1">Detectar objetos que se mueven o varían, como enanas marrones frías y estrellas de alto movimiento propio.</li>
-      <li data-i18n="g2">Acercar la ciencia de SPHEREx a cualquier persona: basta con escribir unas coordenadas.</li>
-      <li data-i18n="g3">Ofrecer análisis profesional (zoom, contraste, negativo, imagen de diferencia) en una interfaz simple.</li></ul></article>
-    <article class="glass wcard rounded-2xl p-6"><h3 data-i18n="h_t">Cómo se usa</h3><ol class="steps">
-      <li data-i18n="h1">Elige un objetivo científico o escribe RA y Dec.</li>
-      <li data-i18n="h2">Carga la región del cielo.</li>
-      <li data-i18n="h3">Reproduce el parpadeo y ajusta zoom, contraste o diferencia.</li></ol></article>
-  </div>
-</section>
-
-<!-- Pestaña Visor -->
-<main id="tab-viewer" class="hidden mx-auto w-full max-w-[1500px] px-4 lg:px-6 py-5 flex-1 grid gap-5 lg:grid-cols-[270px_minmax(0,1fr)_300px] items-start">
-
-  <!-- Panel izquierdo -->
-  <aside class="glass rounded-2xl p-5 order-2 lg:order-1 space-y-6">
-    <div>
-      <h2 class="panel-title" data-i18n="ctl_t">Controles WiseView</h2>
-      <p class="hint mt-1" data-i18n="ctl_h">Ajusta cómo se reproduce y se ve la secuencia.</p>
-    </div>
-
-    <div class="space-y-5">
-      <div>
-        <div class="flex justify-between items-baseline mb-1">
-          <label for="speedSlider" class="text-sm font-semibold text-slate-200" data-i18n="speed">Intervalo de parpadeo</label>
-          <span id="speedLbl" class="font-mono text-sm text-gold">500 ms</span>
-        </div>
-        <input type="range" id="speedSlider" min="100" max="2000" step="50" value="500">
-      </div>
-      <div>
-        <div class="flex justify-between items-baseline mb-1">
-          <label for="zoomSlider" class="text-sm font-semibold text-slate-200">Zoom</label>
-          <span id="zoomLbl" class="font-mono text-sm text-gold">1.0x</span>
-        </div>
-        <input type="range" id="zoomSlider" min="1" max="8" step="0.1" value="1">
-      </div>
-      <div>
-        <div class="flex justify-between items-baseline mb-1">
-          <label for="contrastSlider" class="text-sm font-semibold text-slate-200" data-i18n="contrast">Contraste</label>
-          <span id="contrastLbl" class="font-mono text-sm text-gold">100%</span>
-        </div>
-        <input type="range" id="contrastSlider" min="50" max="300" step="5" value="100">
-      </div>
-    </div>
-
-    <div class="space-y-2.5">
-      <label class="chk">
-        <input type="checkbox" id="invertCheck" onchange="applyFilters()">
-        <span>
-          <span class="block text-sm font-semibold text-slate-200" data-i18n="inv">Invertir píxeles</span>
-          <span class="hint" data-i18n="inv_h">Modo negativo: fuentes oscuras sobre fondo claro.</span>
-        </span>
-      </label>
-      <label class="chk">
-        <input type="checkbox" id="diffCheck" onchange="toggleDifference()">
-        <span>
-          <span class="block text-sm font-semibold text-slate-200" data-i18n="diff">Imagen de diferencia</span>
-          <span class="hint" data-i18n="diff_h">Resta la época de referencia para resaltar lo que cambia.</span>
-        </span>
-      </label>
-    </div>
-  </aside>
-
-  <!-- Visor central -->
-  <section class="glass rounded-2xl p-4 sm:p-6 order-1 lg:order-2 space-y-5 min-w-0">
-    <div class="grid gap-3 sm:grid-cols-[1fr_1fr_auto] items-end">
-      <div>
-        <label for="ra" class="block text-xs font-semibold text-slate-400 mb-1.5" data-i18n="ra">Ascensión recta (RA, grados)</label>
-        <input id="ra" class="field" type="text" inputmode="decimal" value="133.795" autocomplete="off">
-      </div>
-      <div>
-        <label for="dec" class="block text-xs font-semibold text-slate-400 mb-1.5" data-i18n="dec">Declinación (Dec, grados)</label>
-        <input id="dec" class="field" type="text" inputmode="decimal" value="-7.245" autocomplete="off">
-      </div>
-      <button type="button" class="cta w-full sm:w-auto" onclick="loadTarget()" data-i18n="load">Cargar región del cielo</button>
-    </div>
-
-    <div class="viewer">
-      <div class="empty">
-        <span class="text-slate-300 font-semibold" data-i18n="e1">Sin imagen</span>
-        <span data-i18n="e2">Ingresa RA y Dec, o elige un objetivo científico.</span>
-      </div>
-      <img id="blinkImg" alt="Región del cielo" src="">
-      <div class="reticle"></div>
-      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
-    </div>
-
-    <div class="flex items-center gap-4">
-      <button type="button" id="playBtn" onclick="togglePlay()" aria-label="Reproducir o pausar">▶</button>
-      <input type="range" id="timeline" min="0" max="0" step="1" value="0" onchange="onTimelineChange(this.value)" aria-label="Línea de tiempo">
-    </div>
-
-    <div class="grid gap-3 grid-cols-1 sm:grid-cols-3">
-      <div class="stat"><span class="k" data-i18n="k1">Estado</span><span class="v"><i class="dot"></i><span id="status">Listo</span></span></div>
-      <div class="stat"><span class="k" data-i18n="k2">Época actual</span><span id="frameInfo" class="v">Época – / –</span></div>
-      <div class="stat"><span class="k" data-i18n="k3">Fuente de datos</span><span id="sourceInfo" class="v">Caché o en vivo</span></div>
-    </div>
-  </section>
-
-  <!-- Panel derecho -->
-  <aside class="glass rounded-2xl p-5 order-3 space-y-4">
-    <div>
-      <h2 class="panel-title" data-i18n="tg_t">Objetivos científicos</h2>
-      <p class="hint mt-1" data-i18n="tg_h">Un clic carga las coordenadas y la región.</p>
-    </div>
-    <div class="space-y-2">
-      <button type="button" class="preset" onclick="setPreset(133.795, -7.245)"><span class="pn">WISE 0855</span><span class="pt" data-i18n="t0">Enana marrón fría</span><span class="pc">RA 133.795 · Dec −7.245</span></button>
-      <button type="button" class="preset" onclick="setPreset(210.802, 54.348)"><span class="pn" data-i18n="n1">Galaxia M101</span><span class="pt" data-i18n="t1">Galaxia espiral, Molinete</span><span class="pc">RA 210.802 · Dec +54.348</span></button>
-      <button type="button" class="preset" onclick="setPreset(304.693, 42.443)"><span class="pn" data-i18n="n2">Objeto 1 (D2)</span><span class="pt" data-i18n="t2">Candidato variable</span><span class="pc">RA 304.693 · Dec +42.443</span></button>
-      <button type="button" class="preset" onclick="setPreset(269.452, 4.693)"><span class="pn" data-i18n="n3">Estrella de Barnard</span><span class="pt" data-i18n="t3">Enana roja, alto movimiento propio</span><span class="pc">RA 269.452 · Dec +4.693</span></button>
-      <button type="button" class="preset" onclick="setPreset(330.840, -56.786)"><span class="pn">Epsilon Indi B</span><span class="pt" data-i18n="t4">Enana marrón cercana</span><span class="pc">RA 330.840 · Dec −56.786</span></button>
-      <button type="button" class="preset" onclick="setPreset(76.956, 30.401)"><span class="pn">RW Aurigae</span><span class="pt" data-i18n="t5">Estrella joven variable</span><span class="pc">RA 76.956 · Dec +30.401</span></button>
-      <button type="button" class="preset" onclick="setPreset(248.167, 66.755)"><span class="pn">R Draconis</span><span class="pt" data-i18n="t6">Gigante roja tipo Mira</span><span class="pc">RA 248.167 · Dec +66.755</span></button>
-    </div>
-  </aside>
-</main>
-
-<!-- Footer con créditos oficiales -->
-<footer class="border-t border-white/10 bg-void/70 mt-6">
-  <div class="mx-auto max-w-[1500px] px-4 lg:px-6 py-5 grid gap-3 md:grid-cols-[1fr_auto] md:gap-10 items-start text-xs text-slate-400 leading-relaxed">
-    <p class="max-w-4xl" data-i18n="foot">Esta publicación utiliza productos de datos del Espectrofotómetro para la Historia del Universo, Época de Reionización y Explorador de Hielos (SPHEREx), que es un proyecto conjunto del Laboratorio de Propulsión a Chorro y el Instituto Tecnológico de California, y está financiado por la Administración Nacional de Aeronáutica y del Espacio (NASA)</p>
-    <p class="whitespace-nowrap"><span data-i18n="author">Autor</span>: <span class="text-white font-semibold">ESP'acio 32</span></p>
-  </div>
-</footer>
-
-<!-- JavaScript de Interfaz y Backend unificados -->
 <script>
+/* ════════════ ZOOM + PANEO ════════════ */
 (function () {
-  // Manejo de barras deslizantes (sliders)
-  function fill(el) {
-    var min = +el.min || 0, max = +el.max || 100, v = +el.value || 0;
-    el.style.setProperty('--p', max > min ? ((v - min) / (max - min) * 100) + '%' : '0%');
+  const wrap = document.querySelector('.viewer-wrapper');
+  const img  = document.getElementById('blinkImg');
+  const zs   = document.getElementById('zoomSlider');
+  const zl   = document.getElementById('zoomLbl');
+
+  // La imagen pasa a un "escenario" que se mueve y escala; retícula y overlays quedan fijos
+  const stage = document.createElement('div');
+  stage.id = 'vStage';
+  wrap.insertBefore(stage, img);
+  stage.appendChild(img);
+
+  let Z = 1, X = 0, Y = 0, lastSlider = zs.value;
+
+  function view() {
+    const w = wrap.clientWidth, h = wrap.clientHeight;
+    const lim = (v, s) => Z < 1 ? s * (1 - Z) / 2 : Math.min(0, Math.max(s * (1 - Z), v));
+    X = lim(X, w); Y = lim(Y, h);
+    stage.style.transform = `translate(${X}px,${Y}px) scale(${Z})`;
+    zs.value = Z; lastSlider = zs.value;
+    zl.textContent = Z.toFixed(1) + '×';
+    wrap.classList.toggle('zoomed', Z > 1);
   }
-  document.querySelectorAll('input[type=range]').forEach(function (el) {
-    fill(el);
-    el.addEventListener('input', function () { fill(el); });
-    el.addEventListener('change', function () { fill(el); });
+  // Zoom manteniendo fijo el punto (cx, cy) bajo el cursor
+  function zoomAt(nz, cx, cy) {
+    nz = Math.min(4, Math.max(0.5, nz));
+    const r = nz / Z;
+    X = cx - (cx - X) * r; Y = cy - (cy - Y) * r; Z = nz;
+    view();
+  }
+  const local = e => { const r = wrap.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+
+  // applyFilters ya no escala la imagen: aplica filtros y sincroniza el slider con el escenario
+  window.applyFilters = function () {
+    const c = parseInt(document.getElementById('contrastSlider').value) || 100;
+    const inv = document.getElementById('invertCheck').checked;
+    img.style.filter = (inv ? 'invert(1) ' : '') + `contrast(${c}%)`;
+    img.style.transform = '';
+    if (zs.value !== lastSlider) zoomAt(parseFloat(zs.value) || 1, wrap.clientWidth / 2, wrap.clientHeight / 2);
+  };
+
+  // Al cargar otra región, la vista vuelve al encuadre completo
+  const _load = window.loadTarget;
+  window.loadTarget = function () { Z = 1; X = 0; Y = 0; view(); return _load.apply(this, arguments); };
+
+  // Rueda: zoom hacia el cursor
+  wrap.addEventListener('wheel', e => {
+    e.preventDefault();
+    const [x, y] = local(e);
+    zoomAt(Z * Math.exp(-e.deltaY * 0.0018), x, y);
+  }, { passive: false });
+
+  // Doble clic: acerca 3× en ese punto; si ya hay zoom, restablece
+  wrap.addEventListener('dblclick', e => {
+    const [x, y] = local(e);
+    if (Z !== 1) { Z = 1; X = 0; Y = 0; view(); } else zoomAt(3, x, y);
   });
-  setInterval(function () { document.querySelectorAll('input[type=range]').forEach(fill); }, 400);
 
-  // Diccionario de Traducciones (ES / EN)
-  var D = { es: {}, en: {
-    sub:'SPHEREx time-series explorer', nav_w:'Welcome', nav_v:'Viewer', ctl_t:'WiseView controls', ctl_h:'Adjust how the sequence plays and looks.',
-    speed:'Blink interval', contrast:'Contrast', inv:'Invert pixels', inv_h:'Negative mode: dark sources on a light background.',
-    diff:'Difference imaging', diff_h:'Subtracts the reference epoch to highlight what changes.', ra:'Right ascension (RA, degrees)', dec:'Declination (Dec, degrees)',
-    load:'Load sky region', e1:'No image', e2:'Enter RA and Dec, or pick a science target.', k1:'Status', k2:'Current epoch', k3:'Data source',
-    ready:'Ready', frame:'Epoch – / –', src:'Cache or live', tg_t:'Science targets', tg_h:'One click loads the coordinates and the region.',
-    n1:'M101 Galaxy', n2:'Object 1 (D2)', n3:'Barnard’s Star', t0:'Cold brown dwarf', t1:'Spiral galaxy, Pinwheel', t2:'Variable candidate', t3:'Red dwarf, high proper motion',
-    t4:'Nearby brown dwarf', t5:'Young variable star', t6:'Mira-type red giant',
-    w_h:'Watch the sky change', w_p:'Blink Viewer compares images of the same patch of sky taken at different epochs by NASA’s SPHEREx mission. Flipped quickly, anything that moves or varies stands out at a glance.',
-    w_cta:'Open the viewer', w_lang:'Interface language', a_t:'About the project',
-    a_p:'SPHEREx is a NASA space telescope mapping the entire sky in 102 near-infrared colors (0.75 to 5 microns). Each region is observed several times, producing time series: a slow movie of the sky. This project turns them into an interactive tool, inspired by WiseView, that runs in the browser.',
-    g_t:'What we want to achieve', g1:'Detect objects that move or vary, such as cold brown dwarfs and high proper motion stars.', g2:'Bring SPHEREx science to anyone: typing a pair of coordinates is enough.',
-    g_3:'Offer professional analysis (zoom, contrast, negative, difference imaging) in a simple interface.', h_t:'How to use it', h1:'Pick a science target or type RA and Dec.', h2:'Load the sky region.',
-    h3:'Play the blink and adjust zoom, contrast or difference.',
-    foot:'This publication makes use of data products from the Spectro-Photometer for the History of the Universe, Epoch of Reionization and Ices Explorer (SPHEREx), which is a joint project of the Jet Propulsion Laboratory and the California Institute of Technology, and is funded by the National Aeronautics and Space Administration (NASA)',
-    author:'Author' } };
-  
-  var prev = 'es', nodes = document.querySelectorAll('[data-i18n]');
-  nodes.forEach(function (el) { D.es[el.dataset.i18n] = el.textContent.trim(); });
-  
-  function setLang(l) {
-    nodes.forEach(function (el) {
-      var k = el.dataset.i18n;
-      if (el.textContent.trim() === D[prev][k]) el.textContent = D[l][k];
-    });
-    document.documentElement.lang = l; prev = l;
-    document.querySelectorAll('[data-lang]').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.lang === l); });
-    try { localStorage.setItem('bv_lang', l); } catch (e) {}
-  }
-
-  function showTab(n) {
-    ['welcome', 'viewer'].forEach(function (t) { document.getElementById('tab-' + t).classList.toggle('hidden', t !== n); });
-    document.querySelectorAll('.tab').forEach(function (b) { b.setAttribute('aria-selected', b.dataset.tab === n); });
-    window.scrollTo(0, 0);
-  }
-
-  document.querySelectorAll('[data-lang]').forEach(function (b) { b.addEventListener('click', function () { setLang(b.dataset.lang); }); });
-  document.querySelectorAll('[data-tab],[data-go]').forEach(function (b) { b.addEventListener('click', function () { showTab(b.dataset.tab || b.dataset.go); }); });
-  
-  var l0 = 'es'; try { l0 = localStorage.getItem('bv_lang') || ((navigator.language || '').indexOf('en') === 0 ? 'en' : 'es'); } catch (e) {}
-  if (l0 !== 'es') setLang(l0);
+  // Arrastrar para moverse (mouse y táctil) + pellizco con dos dedos
+  const ptrs = new Map(); let pinch = 0;
+  wrap.addEventListener('pointerdown', e => {
+    wrap.setPointerCapture(e.pointerId);
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    wrap.classList.add('drag');
+    if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = Math.hypot(a.x - b.x, a.y - b.y); }
+  });
+  wrap.addEventListener('pointermove', e => {
+    const p = ptrs.get(e.pointerId); if (!p) return;
+    if (ptrs.size === 2) {
+      p.x = e.clientX; p.y = e.clientY;
+      const [a, b] = [...ptrs.values()], d = Math.hypot(a.x - b.x, a.y - b.y), r = wrap.getBoundingClientRect();
+      if (pinch) zoomAt(Z * d / pinch, (a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top);
+      pinch = d;
+    } else {
+      X += e.clientX - p.x; Y += e.clientY - p.y; p.x = e.clientX; p.y = e.clientY; view();
+    }
+  });
+  const end = e => { ptrs.delete(e.pointerId); pinch = 0; if (!ptrs.size) wrap.classList.remove('drag'); };
+  wrap.addEventListener('pointerup', end);
+  wrap.addEventListener('pointercancel', end);
+  window.addEventListener('resize', view);
+  view();
 })();
 
-// Lógica de Conexión con el Backend y Visor (FastAPI)
-let frames = [];
-let currentIndex = 0;
-let isPlaying = false;
-let timer = null;
-let intervalMs = 500;
-let preloadedImages = [];
-let currentZoom = 1.0;
-let currentContrast = 100;
+/* ════════════ PARTÍCULAS EXTRA REACTIVAS AL MOUSE ════════════ */
+(function () {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-function setPreset(ra, dec) {
-    document.getElementById('ra').value = ra;
-    document.getElementById('dec').value = dec;
-    loadTarget();
+  const STARS = 450;   // estrellas adicionales (súbelo o bájalo a gusto)
+  const TRAIL = 3;     // chispas emitidas por movimiento del mouse (0 = desactivar)
+  const RADIUS = 140;  // radio de influencia del mouse
+
+  const c = document.getElementById('starCanvas2'), x = c.getContext('2d');
+  let W, H, S = [], P = [], m = { x: -9999, y: -9999 }, lx = null, ly = 0;
+
+  function init() {
+    W = c.width = innerWidth; H = c.height = innerHeight;
+    S = Array.from({ length: STARS }, () => ({
+      x: Math.random() * W, y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.2, vy: (Math.random() - 0.5) * 0.2,
+      r: Math.random() * 1.1 + 0.3, a: Math.random() * 0.45 + 0.2,
+      p: Math.random() * 6.28, ps: 0.008 + Math.random() * 0.012
+    }));
+  }
+
+  function draw() {
+    x.clearRect(0, 0, W, H);
+
+    for (const s of S) {
+      s.p += s.ps;
+      const dx = s.x - m.x, dy = s.y - m.y, d = Math.hypot(dx, dy);
+      if (d < RADIUS && d > 0) {
+        const f = (RADIUS - d) / RADIUS * 0.5;
+        s.vx += dx / d * f - dy / d * f * 0.15;   // empuje + ligero remolino orgánico
+        s.vy += dy / d * f + dx / d * f * 0.15;
+      }
+      s.vx *= 0.985; s.vy *= 0.985;
+      s.x += s.vx; s.y += s.vy;
+      if (s.x < -10) s.x = W + 10; if (s.x > W + 10) s.x = -10;
+      if (s.y < -10) s.y = H + 10; if (s.y > H + 10) s.y = -10;
+      x.beginPath(); x.arc(s.x, s.y, s.r, 0, 6.283);
+      x.fillStyle = `rgba(26,86,219,${s.a * (0.7 + 0.3 * Math.sin(s.p))})`; x.fill();
+    }
+
+    // Chispas que deja el mouse al moverse
+    for (let i = P.length - 1; i >= 0; i--) {
+      const q = P[i];
+      q.x += q.vx; q.y += q.vy; q.vx *= 0.96; q.vy *= 0.96; q.l -= 0.018;
+      if (q.l <= 0) { P.splice(i, 1); continue; }
+      x.beginPath(); x.arc(q.x, q.y, q.r * (0.5 + q.l * 0.5), 0, 6.283);
+      x.fillStyle = `rgba(26,86,219,${q.l * 0.7})`; x.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+
+  addEventListener('mousemove', e => {
+    m.x = e.clientX; m.y = e.clientY;
+    if (lx !== null && TRAIL) {
+      const mx = m.x - lx, my = m.y - ly, n = Math.min(TRAIL * 2, TRAIL + (Math.hypot(mx, my) / 14 | 0));
+      for (let i = 0; i < n && P.length < 700; i++) {
+        const a = Math.random() * 6.283, v = 0.3 + Math.random() * 1.2;
+        P.push({ x: m.x, y: m.y, vx: Math.cos(a) * v + mx * 0.12, vy: Math.sin(a) * v + my * 0.12, r: Math.random() * 1.4 + 0.5, l: 1 });
+      }
+    }
+    lx = m.x; ly = m.y;
+  });
+  addEventListener('mouseleave', () => { m.x = m.y = -9999; lx = null; });
+  addEventListener('resize', init);
+  init(); draw();
+})();
+</script>
+
+<!-- ══════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════ -->
+<script>
+/* ════════════════════════════════════
+   STAR CANVAS
+════════════════════════════════════ */
+(function() {
+  const canvas = document.getElementById('starCanvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, mouse = { x: -9999, y: -9999 }, stars = [], animId;
+
+  const STAR_COUNT = 130;
+  const CONNECT_DIST = 110;
+  const MOUSE_REPEL = 90;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+
+  function mkStar() {
+    return {
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.18,
+      vy: (Math.random() - 0.5) * 0.18,
+      r: Math.random() * 1.4 + 0.3,
+      alpha: Math.random() * 0.5 + 0.2,
+      pulse: Math.random() * Math.PI * 2,
+      pulseSpeed: 0.008 + Math.random() * 0.012,
+    };
+  }
+
+  function init() {
+    resize();
+    stars = Array.from({ length: STAR_COUNT }, mkStar);
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    stars.forEach(s => {
+      // Pulse
+      s.pulse += s.pulseSpeed;
+      const a = s.alpha * (0.7 + 0.3 * Math.sin(s.pulse));
+
+      // Mouse repel
+      const dx = s.x - mouse.x, dy = s.y - mouse.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < MOUSE_REPEL && dist > 0) {
+        const force = (MOUSE_REPEL - dist) / MOUSE_REPEL * 0.4;
+        s.vx += (dx / dist) * force;
+        s.vy += (dy / dist) * force;
+      }
+
+      // Damping
+      s.vx *= 0.985;
+      s.vy *= 0.985;
+
+      s.x += s.vx;
+      s.y += s.vy;
+
+      // Wrap
+      if (s.x < -10) s.x = W + 10;
+      if (s.x > W + 10) s.x = -10;
+      if (s.y < -10) s.y = H + 10;
+      if (s.y > H + 10) s.y = -10;
+
+      // Draw star dot
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(26, 86, 219, ${a})`;
+      ctx.fill();
+    });
+
+    // Draw connections
+    for (let i = 0; i < stars.length; i++) {
+      for (let j = i + 1; j < stars.length; j++) {
+        const dx = stars[i].x - stars[j].x;
+        const dy = stars[i].y - stars[j].y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < CONNECT_DIST) {
+          const opacity = (1 - d / CONNECT_DIST) * 0.12;
+          ctx.beginPath();
+          ctx.moveTo(stars[i].x, stars[i].y);
+          ctx.lineTo(stars[j].x, stars[j].y);
+          ctx.strokeStyle = `rgba(26, 86, 219, ${opacity})`;
+          ctx.lineWidth = 0.6;
+          ctx.stroke();
+        }
+      }
+    }
+
+    animId = requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', () => { resize(); });
+  window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+  window.addEventListener('mouseleave', () => { mouse.x = -9999; mouse.y = -9999; });
+
+  init();
+  draw();
+})();
+
+
+/* ════════════════════════════════════
+   LANGUAGE SYSTEM
+════════════════════════════════════ */
+let currentLang = 'en';
+
+function setLang(lang) {
+  currentLang = lang;
+  document.documentElement.lang = lang;
+
+  // Toggle active class on buttons
+  document.getElementById('lang-en').classList.toggle('active', lang === 'en');
+  document.getElementById('lang-es').classList.toggle('active', lang === 'es');
+
+  // Update all [data-en] / [data-es] elements
+  document.querySelectorAll('[data-en]').forEach(el => {
+    const txt = el.getAttribute('data-' + lang);
+    if (txt) el.textContent = txt;
+  });
+
+  // Update placeholders
+  document.getElementById('ra').placeholder = lang === 'es' ? 'ej. 133.796' : 'e.g. 133.796';
+  document.getElementById('dec').placeholder = lang === 'es' ? 'ej. -7.245' : 'e.g. -7.245';
+}
+
+// Init language on load
+document.addEventListener('DOMContentLoaded', () => { setLang('en'); });
+
+
+/* ════════════════════════════════════
+   TAB SYSTEM
+════════════════════════════════════ */
+function switchTab(tab) {
+  ['welcome', 'viewer'].forEach(t => {
+    document.getElementById('panel-' + t).classList.toggle('active', t === tab);
+    document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+
+/* ════════════════════════════════════
+   BLINK VIEWER ENGINE
+════════════════════════════════════ */
+let frames = [];
+let currentFrame = 0;
+let playing = false;
+let blinkInterval = null;
+let differenceMode = false;
+
+function setStatus(state, text) {
+  const el = document.getElementById('status');
+  el.className = 'status-badge ' + state;
+  el.innerHTML = `<span class="status-dot"></span><span>${text}</span>`;
+  document.getElementById('statusInline').textContent = text;
+}
+
+function setActiveTarget(el) {
+  document.querySelectorAll('.target-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function showLoading(show) {
+  const overlay = document.getElementById('loadingOverlay');
+  overlay.classList.toggle('visible', show);
+  const btn = document.getElementById('loadBtn');
+  if (show) {
+    btn.disabled = true;
+    btn.innerHTML = `<div class="spinner"></div><span data-en="Loading…" data-es="Cargando…">${currentLang === 'es' ? 'Cargando…' : 'Loading…'}</span>`;
+  } else {
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span>${currentLang === 'es' ? 'Cargar Región Celeste' : 'Load Sky Region'}</span>`;
+  }
 }
 
 async function loadTarget() {
-    let ra = document.getElementById('ra').value;
-    let dec = document.getElementById('dec').value;
-    let status = document.getElementById('status');
-    
-    if(isPlaying) togglePlay();
-    status.innerText = "Cargando fotogramas...";
+  const ra = parseFloat(document.getElementById('ra').value);
+  const dec = parseFloat(document.getElementById('dec').value);
 
-    try {
-        let res = await fetch(`/api/target?ra=${ra}&dec=${dec}`);
-        let data = await res.json();
-        
-        if(data.status === "success") {
-            frames = data.frames;
-            status.innerText = `Cargado (${frames.length} épocas)`;
-            document.getElementById('sourceInfo').innerText = data.source;
-            
-            preloadedImages = frames.map(f => {
-                let img = new Image();
-                img.src = f.url;
-                return img;
-            });
+  if (isNaN(ra) || isNaN(dec)) {
+    setStatus('error', currentLang === 'es' ? 'Coordenadas inválidas' : 'Invalid coordinates');
+    return;
+  }
 
-            let timeline = document.getElementById('timeline');
-            timeline.max = frames.length - 1;
-            timeline.value = 0;
-            currentIndex = 0;
-            showFrame(0);
-        } else {
-            status.innerText = data.error || "No hay datos.";
-        }
-    } catch (err) {
-        status.innerText = "Error de conexión con el servidor.";
+  // Stop any current playback
+  stopPlay();
+  frames = [];
+
+  setStatus('loading', currentLang === 'es' ? 'Consultando NASA/IRSA…' : 'Querying NASA/IRSA…');
+  showLoading(true);
+  document.getElementById('viewerIdle').style.display = 'none';
+
+  try {
+    const res = await fetch(`/api/target?ra=${ra}&dec=${dec}`);
+    const data = await res.json();
+
+    if (!res.ok || !data.frames || data.frames.length === 0) {
+      throw new Error(data.error || 'No frames returned');
     }
+
+    frames = data.frames;
+    currentFrame = 0;
+
+    // Update timeline
+    const tl = document.getElementById('timeline');
+    tl.max = frames.length - 1;
+    tl.value = 0;
+    document.getElementById('timelineLabel').textContent = `1 / ${frames.length}`;
+
+    // Update info
+    document.getElementById('frameInfo').textContent = frames.length;
+    const srcMap = { cache: 'Local Cache', nasa_live_processed: 'NASA/IRSA Live' };
+    const srcLabel = srcMap[data.source] || data.source;
+    document.getElementById('sourceInfo').textContent = srcLabel;
+    document.getElementById('sourceDisplay').textContent = srcLabel;
+
+    // Show first frame
+    showFrame(0);
+    document.getElementById('playBtn').disabled = false;
+
+    setStatus('ready', currentLang === 'es' ? 'Listo' : 'Ready');
+    startPlay();
+
+  } catch (err) {
+    setStatus('error', currentLang === 'es' ? 'Error de carga' : 'Load Error');
+    document.getElementById('viewerIdle').style.display = 'flex';
+    console.error('loadTarget error:', err);
+  } finally {
+    showLoading(false);
+  }
 }
 
-function showFrame(index) {
-    if(frames.length === 0) return;
-    currentIndex = index;
-    let imgEl = document.getElementById('blinkImg');
-    imgEl.src = preloadedImages[currentIndex].src;
-    document.getElementById('timeline').value = currentIndex;
-    document.getElementById('frameInfo').innerText = `Época ${currentIndex + 1} / ${frames.length}`;
+function showFrame(idx) {
+  if (frames.length === 0) return;
+  idx = Math.max(0, Math.min(idx, frames.length - 1));
+  currentFrame = idx;
+
+  const img = document.getElementById('blinkImg');
+  img.src = frames[idx].url;
+  img.style.display = 'block';
+  img.style.display = '';
+  document.getElementById('viewerIdle').style.display = 'none';
+
+  applyFilters();
+
+  document.getElementById('timeline').value = idx;
+  document.getElementById('timelineLabel').textContent = `${idx + 1} / ${frames.length}`;
+
+  const epoch = frames[idx].time;
+  document.getElementById('epochDisplay').textContent = typeof epoch === 'number' ? epoch.toFixed(1) : epoch;
 }
-
-function onTimelineChange(val) {
-    if(isPlaying) togglePlay();
-    showFrame(parseInt(val));
-}
-
-// Controladores de los Sliders
-document.getElementById('speedSlider').addEventListener('input', (e) => {
-    intervalMs = parseInt(e.target.value);
-    document.getElementById('speedLbl').innerText = intervalMs + " ms";
-    if(isPlaying) { clearInterval(timer); startTimer(); }
-});
-
-document.getElementById('zoomSlider').addEventListener('input', (e) => {
-    currentZoom = parseFloat(e.target.value);
-    document.getElementById('zoomLbl').innerText = currentZoom.toFixed(1) + "x";
-    applyFilters();
-});
-
-document.getElementById('contrastSlider').addEventListener('input', (e) => {
-    currentContrast = parseInt(e.target.value);
-    document.getElementById('contrastLbl').innerText = currentContrast + "%";
-    applyFilters();
-});
 
 function applyFilters() {
-    let imgEl = document.getElementById('blinkImg');
-    let invert = document.getElementById('invertCheck').checked ? 'invert(100%)' : 'invert(0%)';
-    imgEl.style.transform = `scale(${currentZoom})`;
-    imgEl.style.filter = `${invert} contrast(${currentContrast}%)`;
+  const img = document.getElementById('blinkImg');
+  const zoom = parseFloat(document.getElementById('zoomSlider').value) || 1;
+  const contrast = parseInt(document.getElementById('contrastSlider').value) || 100;
+  const invert = document.getElementById('invertCheck').checked;
+  const filters = [];
+  if (invert) filters.push('invert(1)');
+  filters.push(`contrast(${contrast}%)`);
+  img.style.filter = filters.join(' ');
+  img.style.transform = `scale(${zoom})`;
+  img.style.transformOrigin = 'center center';
 }
 
 function toggleDifference() {
-    let isDiff = document.getElementById('diffCheck').checked;
-    let imgEl = document.getElementById('blinkImg');
-    if(isDiff) {
-        imgEl.style.filter += ' hue-rotate(180deg)';
-    } else {
-        applyFilters();
-    }
+  differenceMode = document.getElementById('diffCheck').checked;
+  // Visual cue
+  const wrapper = document.querySelector('.viewer-wrapper');
+  if (differenceMode) {
+    wrapper.style.outline = '2px solid rgba(252,61,33,0.5)';
+  } else {
+    wrapper.style.outline = 'none';
+  }
 }
 
-function startTimer() {
-    timer = setInterval(() => {
-        currentIndex = (currentIndex + 1) % frames.length;
-        showFrame(currentIndex);
-    }, intervalMs);
+function startPlay() {
+  if (frames.length === 0) return;
+  playing = true;
+  updatePlayIcon();
+  scheduleNext();
+}
+
+function stopPlay() {
+  playing = false;
+  if (blinkInterval) { clearTimeout(blinkInterval); blinkInterval = null; }
+  updatePlayIcon();
+}
+
+function scheduleNext() {
+  if (!playing) return;
+  const speed = parseInt(document.getElementById('speedSlider').value) || 5;
+  const delay = Math.round(1200 / speed);
+  blinkInterval = setTimeout(() => {
+    if (!playing) return;
+    currentFrame = (currentFrame + 1) % frames.length;
+    showFrame(currentFrame);
+    scheduleNext();
+  }, delay);
 }
 
 function togglePlay() {
-    if(frames.length === 0) return;
-    let btn = document.getElementById('playBtn');
-    if(isPlaying) {
-        clearInterval(timer);
-        isPlaying = false;
-        btn.innerText = "▶";
-    } else {
-        isPlaying = true;
-        btn.innerText = "❚❚";
-        startTimer();
-    }
+  if (frames.length === 0) return;
+  if (playing) { stopPlay(); } else { startPlay(); }
+}
+
+function updatePlayIcon() {
+  const icon = document.getElementById('playIcon');
+  if (playing) {
+    icon.innerHTML = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+  } else {
+    icon.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"/>';
+  }
+}
+
+function onTimelineChange(val) {
+  stopPlay();
+  showFrame(parseInt(val));
+}
+
+function setPreset(ra, dec) {
+  document.getElementById('ra').value = ra;
+  document.getElementById('dec').value = dec;
+  switchTab('viewer');
+  // Small delay to allow DOM to settle then auto-load
+  setTimeout(loadTarget, 80);
 }
 </script>
+
 </body>
 </html>
