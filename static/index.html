@@ -1,1274 +1,543 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SPHEREx Blink Viewer — ESP-acio 32</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Inter', 'system-ui', 'sans-serif'],
-            display: ['Space Grotesk', 'Inter', 'sans-serif'],
-          },
-          colors: {
-            surface: '#F8F9FB',
-            canvas: '#FFFFFF',
-            border: '#E5E8EF',
-            muted: '#8A93A8',
-            accent: '#1A56DB',
-            'accent-soft': '#EEF2FF',
-            'accent-hover': '#1648C7',
-            ink: '#0D1117',
-            'ink-soft': '#3D4455',
-            nasa: '#0B3D91',
-            'nasa-red': '#FC3D21',
-          },
-          boxShadow: {
-            card: '0 1px 4px 0 rgba(13,17,23,0.06), 0 4px 24px 0 rgba(13,17,23,0.04)',
-            'card-hover': '0 4px 16px 0 rgba(13,17,23,0.10), 0 8px 40px 0 rgba(13,17,23,0.06)',
-            viewer: '0 0 0 1px rgba(13,17,23,0.08), 0 8px 32px 0 rgba(13,17,23,0.10)',
-          },
-        }
-      }
-    }
-  </script>
-  <style>
-    /* ── Reset & Base ── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
-    body {
-      font-family: 'Inter', system-ui, sans-serif;
-      background: #F8F9FB;
-      color: #0D1117;
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    /* ── Star Canvas ── */
-    #starCanvas {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      z-index: 0;
-      opacity: 0.55;
-    }
-
-    /* ── Layout Shell ── */
-    .shell { position: relative; z-index: 1; }
-
-    /* ── Navbar ── */
-    .navbar {
-      position: sticky;
-      top: 0;
-      z-index: 50;
-      background: rgba(248,249,251,0.88);
-      backdrop-filter: blur(16px) saturate(180%);
-      -webkit-backdrop-filter: blur(16px) saturate(180%);
-      border-bottom: 1px solid #E5E8EF;
-    }
-
-    /* ── Tab System ── */
-    .tab-btn {
-      position: relative;
-      padding: 0.5rem 1.25rem;
-      font-size: 0.8125rem;
-      font-weight: 500;
-      color: #8A93A8;
-      border-radius: 9999px;
-      transition: color 0.2s, background 0.2s;
-      cursor: pointer;
-      white-space: nowrap;
-      letter-spacing: 0.01em;
-      border: none;
-      background: none;
-    }
-    .tab-btn:hover { color: #0D1117; background: rgba(13,17,23,0.04); }
-    .tab-btn.active {
-      color: #1A56DB;
-      background: #EEF2FF;
-      font-weight: 600;
-    }
-    .tab-panel { display: none; }
-    .tab-panel.active { display: block; }
-
-    /* ── Lang Toggle ── */
-    .lang-btn {
-      font-size: 0.75rem;
-      font-weight: 600;
-      padding: 0.25rem 0.625rem;
-      border-radius: 6px;
-      border: 1px solid #E5E8EF;
-      cursor: pointer;
-      transition: all 0.15s;
-      letter-spacing: 0.05em;
-      background: white;
-      color: #8A93A8;
-    }
-    .lang-btn.active {
-      background: #0D1117;
-      color: #fff;
-      border-color: #0D1117;
-    }
-    .lang-btn:not(.active):hover { border-color: #1A56DB; color: #1A56DB; }
-
-    /* ── Hero Section ── */
-    .hero-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      background: #EEF2FF;
-      border: 1px solid #C7D2FE;
-      color: #1A56DB;
-      font-size: 0.6875rem;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      padding: 0.3rem 0.75rem;
-      border-radius: 9999px;
-    }
-    .hero-badge .dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: #1A56DB;
-      animation: pulse-dot 2s ease-in-out infinite;
-    }
-    @keyframes pulse-dot {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(0.75); }
-    }
-
-    /* ── CTA Button ── */
-    .cta-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      background: #0D1117;
-      color: #fff;
-      font-weight: 600;
-      font-size: 0.9375rem;
-      padding: 0.8125rem 2rem;
-      border-radius: 12px;
-      border: none;
-      cursor: pointer;
-      transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
-      letter-spacing: 0.01em;
-      position: relative;
-      overflow: hidden;
-    }
-    .cta-btn::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, rgba(26,86,219,0.15) 0%, transparent 60%);
-      opacity: 0;
-      transition: opacity 0.2s;
-    }
-    .cta-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(13,17,23,0.2); }
-    .cta-btn:hover::before { opacity: 1; }
-    .cta-btn:active { transform: translateY(0); }
-
-    .cta-secondary {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      background: white;
-      color: #0D1117;
-      font-weight: 600;
-      font-size: 0.9375rem;
-      padding: 0.8125rem 2rem;
-      border-radius: 12px;
-      border: 1px solid #E5E8EF;
-      cursor: pointer;
-      transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
-    }
-    .cta-secondary:hover { border-color: #1A56DB; color: #1A56DB; transform: translateY(-2px); box-shadow: 0 4px 16px rgba(26,86,219,0.08); }
-
-    /* ── Feature Cards ── */
-    .feature-card {
-      background: white;
-      border: 1px solid #E5E8EF;
-      border-radius: 16px;
-      padding: 1.5rem;
-      transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
-      cursor: default;
-    }
-    .feature-card:hover {
-      border-color: #C7D2FE;
-      box-shadow: 0 4px 16px rgba(26,86,219,0.08);
-      transform: translateY(-3px);
-    }
-    .feature-icon {
-      width: 44px; height: 44px;
-      border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.25rem;
-      margin-bottom: 0.75rem;
-    }
-
-    /* ── Viewer Section ── */
-    .viewer-panel {
-      background: white;
-      border: 1px solid #E5E8EF;
-      border-radius: 20px;
-      overflow: hidden;
-      box-shadow: 0 1px 4px rgba(13,17,23,0.06), 0 8px 32px rgba(13,17,23,0.04);
-    }
-    .panel-header {
-      padding: 0.75rem 1rem;
-      border-bottom: 1px solid #E5E8EF;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      background: #FAFBFD;
-    }
-    .panel-header-dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-    }
-
-    /* ── Custom Slider ── */
-    .custom-slider {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 100%;
-      height: 4px;
-      border-radius: 2px;
-      background: #E5E8EF;
-      outline: none;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .custom-slider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 16px; height: 16px;
-      border-radius: 50%;
-      background: #0D1117;
-      border: 2px solid white;
-      box-shadow: 0 1px 4px rgba(13,17,23,0.2);
-      cursor: pointer;
-      transition: transform 0.15s, box-shadow 0.15s;
-    }
-    .custom-slider::-webkit-slider-thumb:hover {
-      transform: scale(1.2);
-      box-shadow: 0 2px 8px rgba(13,17,23,0.3);
-    }
-    .custom-slider::-moz-range-thumb {
-      width: 16px; height: 16px;
-      border-radius: 50%;
-      background: #0D1117;
-      border: 2px solid white;
-      box-shadow: 0 1px 4px rgba(13,17,23,0.2);
-      cursor: pointer;
-    }
-
-    /* ── Timeline slider ── */
-    #timeline {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 100%;
-      height: 3px;
-      border-radius: 2px;
-      background: #E5E8EF;
-      outline: none;
-      cursor: pointer;
-    }
-    #timeline::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 14px; height: 14px;
-      border-radius: 50%;
-      background: white;
-      border: 2.5px solid #1A56DB;
-      box-shadow: 0 1px 6px rgba(26,86,219,0.3);
-      cursor: pointer;
-    }
-
-    /* ── Custom Checkbox ── */
-    .custom-check {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 18px; height: 18px;
-      border-radius: 5px;
-      border: 1.5px solid #D1D5E0;
-      background: white;
-      cursor: pointer;
-      transition: all 0.15s;
-      flex-shrink: 0;
-      position: relative;
-    }
-    .custom-check:checked {
-      background: #0D1117;
-      border-color: #0D1117;
-    }
-    .custom-check:checked::after {
-      content: '';
-      position: absolute;
-      top: 2px; left: 5px;
-      width: 5px; height: 9px;
-      border: 2px solid white;
-      border-top: none;
-      border-left: none;
-      transform: rotate(45deg);
-    }
-    .custom-check:hover { border-color: #1A56DB; }
-
-    /* ── Load Button ── */
-    .load-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      width: 100%;
-      background: #0D1117;
-      color: white;
-      font-weight: 600;
-      font-size: 0.8125rem;
-      padding: 0.6875rem 1rem;
-      border-radius: 10px;
-      border: none;
-      cursor: pointer;
-      transition: all 0.2s;
-      letter-spacing: 0.02em;
-    }
-    .load-btn:hover { background: #1A56DB; box-shadow: 0 4px 16px rgba(26,86,219,0.25); }
-    .load-btn:disabled { background: #8A93A8; cursor: not-allowed; box-shadow: none; }
-
-    /* ── Input Fields ── */
-    .coord-input {
-      width: 100%;
-      padding: 0.5625rem 0.75rem;
-      font-size: 0.8125rem;
-      font-family: 'Space Grotesk', monospace;
-      border: 1.5px solid #E5E8EF;
-      border-radius: 8px;
-      background: white;
-      color: #0D1117;
-      outline: none;
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    .coord-input:focus {
-      border-color: #1A56DB;
-      box-shadow: 0 0 0 3px rgba(26,86,219,0.08);
-    }
-    .coord-input::placeholder { color: #B8BFCC; }
-
-    /* ── Viewer Frame ── */
-    .viewer-wrapper {
-      position: relative;
-      width: 100%;
-      aspect-ratio: 1;
-      background: #0D1117;
-      overflow: hidden;
-    }
-    #blinkImg {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-      image-rendering: pixelated;
-    }
-    .viewer-idle {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 0.75rem;
-      color: rgba(255,255,255,0.4);
-      font-size: 0.8125rem;
-      pointer-events: none;
-    }
-    .viewer-idle svg { opacity: 0.3; }
-
-    /* ── Reticle Corners ── */
-    .reticle-corner {
-      position: absolute;
-      width: 20px; height: 20px;
-      border-color: rgba(26,86,219,0.7);
-      border-style: solid;
-      border-width: 0;
-      pointer-events: none;
-      z-index: 2;
-    }
-    .reticle-corner.tl { top: 10px; left: 10px; border-top-width: 2px; border-left-width: 2px; }
-    .reticle-corner.tr { top: 10px; right: 10px; border-top-width: 2px; border-right-width: 2px; }
-    .reticle-corner.bl { bottom: 10px; left: 10px; border-bottom-width: 2px; border-left-width: 2px; }
-    .reticle-corner.br { bottom: 10px; right: 10px; border-bottom-width: 2px; border-right-width: 2px; }
-    .crosshair-h, .crosshair-v {
-      position: absolute;
-      background: rgba(26,86,219,0.25);
-      pointer-events: none;
-      z-index: 2;
-    }
-    .crosshair-h { top: 50%; left: 20%; right: 20%; height: 1px; transform: translateY(-50%); }
-    .crosshair-v { left: 50%; top: 20%; bottom: 20%; width: 1px; transform: translateX(-50%); }
-
-    /* ── Play Button ── */
-    .play-btn {
-      display: flex; align-items: center; justify-content: center;
-      width: 36px; height: 36px;
-      border-radius: 50%;
-      background: #1A56DB;
-      border: none;
-      cursor: pointer;
-      color: white;
-      transition: all 0.2s;
-      flex-shrink: 0;
-    }
-    .play-btn:hover { background: #1648C7; transform: scale(1.1); box-shadow: 0 4px 12px rgba(26,86,219,0.4); }
-    .play-btn:active { transform: scale(0.97); }
-
-    /* ── Status Badge ── */
-    .status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-      font-size: 0.6875rem;
-      font-weight: 600;
-      padding: 0.2rem 0.6rem;
-      border-radius: 9999px;
-      letter-spacing: 0.04em;
-    }
-    .status-badge.idle { background: #F3F4F6; color: #6B7280; }
-    .status-badge.loading { background: #FEF9C3; color: #854D0E; }
-    .status-badge.ready { background: #DCFCE7; color: #166534; }
-    .status-badge.error { background: #FEE2E2; color: #991B1B; }
-    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-    .status-badge.loading .status-dot { animation: pulse-dot 1s ease-in-out infinite; }
-
-    /* ── Target Cards ── */
-    .target-card {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.75rem;
-      border-radius: 12px;
-      border: 1px solid #E5E8EF;
-      background: white;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .target-card:hover {
-      border-color: #1A56DB;
-      background: #EEF2FF;
-      transform: translateX(3px);
-    }
-    .target-card.active {
-      border-color: #1A56DB;
-      background: #EEF2FF;
-    }
-    .target-icon {
-      width: 36px; height: 36px;
-      border-radius: 10px;
-      background: #F3F4F6;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1rem;
-      flex-shrink: 0;
-    }
-    .target-card:hover .target-icon, .target-card.active .target-icon {
-      background: #C7D2FE;
-    }
-    .target-name { font-size: 0.8125rem; font-weight: 600; color: #0D1117; line-height: 1.3; }
-    .target-type { font-size: 0.6875rem; color: #8A93A8; margin-top: 1px; }
-    .target-coords { font-size: 0.6875rem; font-family: 'Space Grotesk', monospace; color: #8A93A8; margin-top: 2px; }
-
-    /* ── Info Row ── */
-    .info-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0.5rem 0;
-      border-bottom: 1px solid #F3F4F6;
-      font-size: 0.75rem;
-    }
-    .info-row:last-child { border-bottom: none; }
-    .info-label { color: #8A93A8; font-weight: 500; }
-    .info-value { color: #0D1117; font-weight: 600; font-family: 'Space Grotesk', monospace; }
-
-    /* ── Spinner ── */
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .spinner {
-      width: 20px; height: 20px;
-      border: 2.5px solid rgba(255,255,255,0.2);
-      border-top-color: white;
-      border-radius: 50%;
-      animation: spin 0.75s linear infinite;
-    }
-
-    /* ── Section Divider ── */
-    .section-label {
-      font-size: 0.6875rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: #8A93A8;
-      margin-bottom: 0.625rem;
-    }
-
-    /* ── Footer ── */
-    .footer {
-      background: white;
-      border-top: 1px solid #E5E8EF;
-      padding: 1.5rem 2rem;
-    }
-
-    /* ── Responsive ── */
-    @media (max-width: 1024px) {
-      .viewer-grid { grid-template-columns: 1fr !important; }
-    }
-
-    /* ── Smooth Tab Transitions ── */
-    .tab-panel { animation: fadeIn 0.25s ease; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-
-    /* ── Scroll-snap hero ── */
-    .stat-number {
-      font-family: 'Space Grotesk', sans-serif;
-      font-weight: 700;
-      font-size: 2rem;
-      color: #0D1117;
-      line-height: 1;
-    }
-    .stat-label { font-size: 0.75rem; color: #8A93A8; margin-top: 0.25rem; }
-
-    /* ── Gradient Underline Heading ── */
-    .gradient-word {
-      background: linear-gradient(135deg, #1A56DB 0%, #7C3AED 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    /* ── NASA Ribbon ── */
-    .nasa-ribbon {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      background: #0B3D91;
-      color: white;
-      font-size: 0.6875rem;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      padding: 0.25rem 0.75rem;
-      border-radius: 6px;
-    }
-
-    /* ── Loading overlay ── */
-    #loadingOverlay {
-      position: absolute;
-      inset: 0;
-      background: rgba(13,17,23,0.85);
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 0.75rem;
-      z-index: 10;
-      color: white;
-      font-size: 0.8125rem;
-      border-radius: 0;
-    }
-    #loadingOverlay.visible { display: flex; }
-    .loading-ring {
-      width: 40px; height: 40px;
-      border: 3px solid rgba(255,255,255,0.15);
-      border-top-color: #1A56DB;
-      border-radius: 50%;
-      animation: spin 0.9s linear infinite;
-    }
-  </style>
-</head> 
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SPHEREx Blink Viewer — ESP-acio 32</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','system-ui','sans-serif'],display:['Space Grotesk','Inter','sans-serif']},
+colors:{surface:'#F8F9FB',border:'#E5E8EF',muted:'#8A93A8',accent:'#1A56DB',ink:'#0D1117','ink-soft':'#3D4455'}}}}
+</script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',system-ui,sans-serif;background:#F8F9FB;color:#0D1117;min-height:100vh;overflow-x:hidden}
+#starCanvas{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.55}
+.shell{position:relative;z-index:1}
+.navbar{position:sticky;top:0;z-index:50;background:rgba(248,249,251,.88);backdrop-filter:blur(16px) saturate(180%);-webkit-backdrop-filter:blur(16px) saturate(180%);border-bottom:1px solid #E5E8EF}
+.tab-btn{padding:.5rem 1.25rem;font-size:.8125rem;font-weight:500;color:#8A93A8;border-radius:9999px;transition:.2s;cursor:pointer;white-space:nowrap;border:0;background:none}
+.tab-btn:hover{color:#0D1117;background:rgba(13,17,23,.04)}
+.tab-btn.active{color:#1A56DB;background:#EEF2FF;font-weight:600}
+.tab-panel{display:none;animation:fadeIn .25s ease}.tab-panel.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.lang-btn{font-size:.75rem;font-weight:600;padding:.25rem .625rem;border-radius:6px;border:1px solid #E5E8EF;cursor:pointer;transition:.15s;letter-spacing:.05em;background:#fff;color:#8A93A8}
+.lang-btn.active{background:#0D1117;color:#fff;border-color:#0D1117}
+.lang-btn:not(.active):hover{border-color:#1A56DB;color:#1A56DB}
+.hero-badge{display:inline-flex;align-items:center;gap:.4rem;background:#EEF2FF;border:1px solid #C7D2FE;color:#1A56DB;font-size:.6875rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .75rem;border-radius:9999px}
+.hero-badge .dot{width:6px;height:6px;border-radius:50%;background:#1A56DB;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.75)}}
+.nasa-ribbon{display:inline-flex;align-items:center;gap:.5rem;background:#0B3D91;color:#fff;font-size:.6875rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:.25rem .75rem;border-radius:6px}
+.cta-btn,.cta-secondary{display:inline-flex;align-items:center;gap:.5rem;font-weight:600;font-size:.9375rem;padding:.8125rem 2rem;border-radius:12px;cursor:pointer;transition:all .2s cubic-bezier(.4,0,.2,1)}
+.cta-btn{background:#0D1117;color:#fff;border:0}
+.cta-btn:hover{transform:translateY(-2px);background:#1A56DB;box-shadow:0 8px 24px rgba(13,17,23,.2)}
+.cta-secondary{background:#fff;color:#0D1117;border:1px solid #E5E8EF}
+.cta-secondary:hover{border-color:#1A56DB;color:#1A56DB;transform:translateY(-2px)}
+.feature-card{background:#fff;border:1px solid #E5E8EF;border-radius:16px;padding:1.5rem;transition:all .25s}
+.feature-card:hover{border-color:#C7D2FE;box-shadow:0 4px 16px rgba(26,86,219,.08);transform:translateY(-3px)}
+.feature-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.25rem;margin-bottom:.75rem}
+.stat-number{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:2rem;line-height:1}
+.stat-label{font-size:.75rem;color:#8A93A8;margin-top:.25rem}
+.gradient-word{background:linear-gradient(135deg,#1A56DB,#7C3AED);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.section-label{font-size:.6875rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#8A93A8;margin-bottom:.625rem}
+.viewer-panel{background:#fff;border:1px solid #E5E8EF;border-radius:20px;overflow:hidden;box-shadow:0 1px 4px rgba(13,17,23,.06),0 8px 32px rgba(13,17,23,.04)}
+.panel-header{padding:.75rem 1rem;border-bottom:1px solid #E5E8EF;display:flex;align-items:center;gap:.5rem;background:#FAFBFD}
+.panel-header i{width:8px;height:8px;border-radius:50%}
+.panel-title{margin-left:.25rem;font-size:.6875rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#8A93A8}
+.custom-slider,#timeline{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:2px;background:#E5E8EF;outline:none;cursor:pointer}
+.custom-slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#0D1117;border:2px solid #fff;box-shadow:0 1px 4px rgba(13,17,23,.2);transition:transform .15s}
+.custom-slider::-webkit-slider-thumb:hover{transform:scale(1.2)}
+.custom-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#0D1117;border:2px solid #fff}
+#timeline::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#fff;border:2.5px solid #1A56DB;box-shadow:0 1px 6px rgba(26,86,219,.3)}
+#timeline::-moz-range-thumb{width:11px;height:11px;border-radius:50%;background:#fff;border:2.5px solid #1A56DB}
+.custom-check{-webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:5px;border:1.5px solid #D1D5E0;background:#fff;cursor:pointer;transition:.15s;flex-shrink:0;position:relative}
+.custom-check:checked{background:#0D1117;border-color:#0D1117}
+.custom-check:checked::after{content:'';position:absolute;top:2px;left:5px;width:5px;height:9px;border:2px solid #fff;border-top:0;border-left:0;transform:rotate(45deg)}
+.custom-check:hover{border-color:#1A56DB}
+.load-btn{display:flex;align-items:center;justify-content:center;gap:.5rem;width:100%;background:#0D1117;color:#fff;font-weight:600;font-size:.8125rem;padding:.6875rem 1rem;border-radius:10px;border:0;cursor:pointer;transition:.2s}
+.load-btn:hover{background:#1A56DB;box-shadow:0 4px 16px rgba(26,86,219,.25)}
+.load-btn:disabled{background:#8A93A8;cursor:not-allowed;box-shadow:none}
+.coord-input{width:100%;padding:.5625rem .75rem;font-size:.8125rem;font-family:'Space Grotesk',monospace;border:1.5px solid #E5E8EF;border-radius:8px;background:#fff;color:#0D1117;outline:none;transition:.15s}
+.coord-input:focus{border-color:#1A56DB;box-shadow:0 0 0 3px rgba(26,86,219,.08)}
+.field-label{display:block;margin-bottom:.375rem;font-size:.6875rem;font-weight:600;color:#8A93A8;letter-spacing:.06em;text-transform:uppercase}
+/* Visor con zoom y paneo */
+.viewer-wrapper{position:relative;width:100%;aspect-ratio:1;background:#0D1117;overflow:hidden;touch-action:none;user-select:none}
+.viewer-wrapper.zoomed{cursor:grab}.viewer-wrapper.drag{cursor:grabbing}
+#stage{position:absolute;inset:0;transform-origin:0 0;will-change:transform}
+#blinkImg{width:100%;height:100%;object-fit:contain;display:block;image-rendering:pixelated;pointer-events:none;-webkit-user-drag:none}
+.viewer-idle{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.75rem;color:rgba(255,255,255,.4);font-size:.8125rem;pointer-events:none;text-align:center;padding:1rem}
+.rc{position:absolute;width:20px;height:20px;border:0 solid rgba(26,86,219,.8);pointer-events:none;z-index:2}
+.rc.tl{top:10px;left:10px;border-top-width:2px;border-left-width:2px}.rc.tr{top:10px;right:10px;border-top-width:2px;border-right-width:2px}
+.rc.bl{bottom:10px;left:10px;border-bottom-width:2px;border-left-width:2px}.rc.br{bottom:10px;right:10px;border-bottom-width:2px;border-right-width:2px}
+.cross-h,.cross-v{position:absolute;background:rgba(26,86,219,.3);pointer-events:none;z-index:2}
+.cross-h{top:50%;left:20%;right:20%;height:1px}.cross-v{left:50%;top:20%;bottom:20%;width:1px}
+#loadingOverlay{position:absolute;inset:0;background:rgba(13,17,23,.85);display:none;flex-direction:column;align-items:center;justify-content:center;gap:.75rem;z-index:10;color:#fff;font-size:.8125rem}
+#loadingOverlay.visible{display:flex}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-ring{width:40px;height:40px;border:3px solid rgba(255,255,255,.15);border-top-color:#1A56DB;border-radius:50%;animation:spin .9s linear infinite}
+.spinner{width:16px;height:16px;border:2.5px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:spin .75s linear infinite;display:none}
+.reset-btn{position:absolute;top:10px;right:42px;z-index:4;font-size:.6875rem;font-weight:600;color:#fff;padding:.25rem .65rem;border-radius:9999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);cursor:pointer;backdrop-filter:blur(8px)}
+.play-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:#1A56DB;border:0;cursor:pointer;color:#fff;transition:.2s;flex-shrink:0}
+.play-btn:hover{background:#1648C7;transform:scale(1.1);box-shadow:0 4px 12px rgba(26,86,219,.4)}
+.play-btn:disabled{background:#B8BFCC;cursor:not-allowed;transform:none;box-shadow:none}
+.status-badge{display:inline-flex;align-items:center;gap:.35rem;font-size:.6875rem;font-weight:600;padding:.2rem .6rem;border-radius:9999px;letter-spacing:.04em;max-width:260px}
+.status-badge.idle{background:#F3F4F6;color:#6B7280}.status-badge.loading{background:#FEF9C3;color:#854D0E}
+.status-badge.ready{background:#DCFCE7;color:#166534}.status-badge.error{background:#FEE2E2;color:#991B1B}
+.status-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
+.status-badge.loading .status-dot{animation:pulse 1s ease-in-out infinite}
+.target-card{display:flex;align-items:center;gap:.75rem;padding:.75rem;border-radius:12px;border:1px solid #E5E8EF;background:#fff;cursor:pointer;transition:.2s}
+.target-card:hover,.target-card.active{border-color:#1A56DB;background:#EEF2FF}
+.target-card:hover{transform:translateX(3px)}
+.target-icon{width:36px;height:36px;border-radius:10px;background:#F3F4F6;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+.target-card:hover .target-icon,.target-card.active .target-icon{background:#C7D2FE}
+.target-name{font-size:.8125rem;font-weight:600;line-height:1.3}
+.target-type{font-size:.6875rem;color:#8A93A8;margin-top:1px}
+.target-coords{font-size:.6875rem;font-family:'Space Grotesk',monospace;color:#8A93A8;margin-top:2px}
+.info-row{display:flex;align-items:center;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid #F3F4F6;font-size:.75rem}
+.info-row:last-child{border-bottom:0}.info-label{color:#8A93A8;font-weight:500}
+.info-value{font-weight:600;font-family:'Space Grotesk',monospace}
+.mini-lbl{font-size:.6rem;text-transform:uppercase;letter-spacing:.08em;font-weight:600;color:#8A93A8}
+.mini-val{font-size:.75rem;font-weight:600;margin-top:2px;overflow-wrap:anywhere}
+.footer{background:#fff;border-top:1px solid #E5E8EF;padding:1.5rem 2rem}
+@media(max-width:1024px){.viewer-grid{grid-template-columns:1fr!important}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
 <body>
-
-<!-- ══════════════════════════════════════════════
-     STAR CANVAS BACKGROUND
-══════════════════════════════════════════════ -->
-<canvas id="starCanvas"></canvas>
+<canvas id="starCanvas" aria-hidden="true"></canvas>
 
 <div class="shell">
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="max-w-screen-xl mx-auto px-4 sm:px-6 flex items-center justify-between h-14 gap-4">
+    <div class="flex items-center gap-3 flex-shrink-0">
+      <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#0B3D91,#1A56DB);display:flex;align-items:center;justify-content:center">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" fill="white"/><circle cx="12" cy="12" r="10" stroke="white" stroke-width="1.5" stroke-dasharray="3 2"/><path d="M2 12h4M18 12h4M12 2v4M12 18v4" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <div>
+        <div class="font-display font-bold text-sm text-ink leading-tight tracking-tight">SPHEREx <span class="text-accent">Blink Viewer</span></div>
+        <div class="text-muted" style="font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;font-weight:600">NASA Space Apps · ESP-acio 32</div>
+      </div>
+    </div>
+    <div class="flex items-center gap-1">
+      <button class="tab-btn active" id="tab-welcome" onclick="switchTab('welcome')" data-en="Welcome" data-es="Bienvenida">Welcome</button>
+      <button class="tab-btn" id="tab-viewer" onclick="switchTab('viewer')" data-en="Interactive Viewer" data-es="Visor Interactivo">Interactive Viewer</button>
+    </div>
+    <div class="flex items-center gap-1 flex-shrink-0">
+      <button class="lang-btn active" id="lang-en" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" id="lang-es" onclick="setLang('es')">ES</button>
+    </div>
+  </div>
+</nav>
 
-  <!-- ══════════════════════════════════════════════
-       NAVBAR
-  ══════════════════════════════════════════════ -->
-  <nav class="navbar">
-    <div class="max-w-screen-xl mx-auto px-4 sm:px-6 flex items-center justify-between h-14 gap-4">
+<!-- TAB 1: WELCOME -->
+<div id="panel-welcome" class="tab-panel active">
+  <section class="max-w-screen-xl mx-auto px-4 sm:px-8 pt-20 pb-16">
+    <div class="max-w-3xl mx-auto text-center">
+      <div class="flex items-center justify-center gap-3 mb-6 flex-wrap">
+        <span class="hero-badge"><span class="dot"></span>NASA Space Apps Challenge 2025</span>
+        <span class="nasa-ribbon">SPHEREx Mission · DR1</span>
+      </div>
+      <h1 class="font-display font-bold text-ink mb-5 leading-tight" style="font-size:clamp(2rem,5vw,3.5rem);letter-spacing:-.02em">
+        <span data-en="Explore the" data-es="Explora el">Explore the</span><br/>
+        <span class="gradient-word" data-en="Infrared Universe" data-es="Universo Infrarrojo">Infrared Universe</span><br/>
+        <span data-en="One Blink at a Time" data-es="Un Parpadeo a la Vez">One Blink at a Time</span>
+      </h1>
+      <p class="text-ink-soft mb-8 max-w-2xl mx-auto leading-relaxed" style="font-size:1.0625rem"
+         data-en="SPHEREx maps the whole sky in 102 near-infrared bands. Blink Viewer flips through its epochs so anyone can spot moving and variable objects: brown dwarfs, comets, asteroids and young stars."
+         data-es="SPHEREx cartografía todo el cielo en 102 bandas del infrarrojo cercano. Blink Viewer recorre sus épocas para que cualquiera detecte objetos móviles y variables: enanas marrones, cometas, asteroides y estrellas jóvenes.">SPHEREx maps the whole sky in 102 near-infrared bands. Blink Viewer flips through its epochs so anyone can spot moving and variable objects: brown dwarfs, comets, asteroids and young stars.</p>
+      <div class="flex flex-wrap items-center justify-center gap-3">
+        <button class="cta-btn" onclick="switchTab('viewer')"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg><span data-en="Launch Viewer" data-es="Abrir Visor">Launch Viewer</span></button>
+        <button class="cta-secondary" onclick="document.getElementById('problem').scrollIntoView({behavior:'smooth'})"><span data-en="Learn More" data-es="Saber Más">Learn More</span></button>
+      </div>
+    </div>
+  </section>
 
-      <!-- Logo + Wordmark -->
-      <div class="flex items-center gap-3 flex-shrink-0">
-        <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#0B3D91,#1A56DB);display:flex;align-items:center;justify-content:center;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="3" fill="white"/>
-            <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2z" stroke="white" stroke-width="1.5" fill="none" stroke-dasharray="3 2"/>
-            <path d="M2 12h4M18 12h4M12 2v4M12 18v4" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
-        </div>
+  <div class="max-w-screen-xl mx-auto px-4 sm:px-8 pb-16">
+    <div class="bg-white border border-border rounded-2xl p-6 grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div class="text-center"><div class="stat-number">102</div><div class="stat-label" data-en="Spectral Bands" data-es="Bandas Espectrales">Spectral Bands</div></div>
+      <div class="text-center md:border-l border-border"><div class="stat-number">1B+</div><div class="stat-label" data-en="Catalogued Objects" data-es="Objetos Catalogados">Catalogued Objects</div></div>
+      <div class="text-center md:border-l border-border"><div class="stat-number">0.75–5μm</div><div class="stat-label" data-en="NIR Coverage" data-es="Cobertura NIR">NIR Coverage</div></div>
+      <div class="text-center md:border-l border-border"><div class="stat-number">All-Sky</div><div class="stat-label" data-en="Every 6 months" data-es="Cada 6 meses">Every 6 months</div></div>
+    </div>
+  </div>
+
+  <section id="problem" class="max-w-screen-xl mx-auto px-4 sm:px-8 pb-20">
+    <div class="text-center mb-12">
+      <div class="section-label" data-en="The Scientific Challenge" data-es="El Reto Científico">The Scientific Challenge</div>
+      <h2 class="font-display font-bold text-ink mb-4" style="font-size:clamp(1.5rem,3vw,2.25rem);letter-spacing:-.015em" data-en="Time-Domain Astronomy at Infrared Scale" data-es="Astronomía de Dominio Temporal a Escala Infrarroja">Time-Domain Astronomy at Infrared Scale</h2>
+      <p class="text-ink-soft max-w-2xl mx-auto leading-relaxed" data-en="Too much data for any one person to inspect. Objects that shift position or brightness between visits are hidden in catalogs of billions of sources." data-es="Hay demasiados datos para que una persona los revise. Los objetos que cambian de posición o brillo entre visitas están ocultos en catálogos de miles de millones de fuentes.">Too much data for any one person to inspect. Objects that shift position or brightness between visits are hidden in catalogs of billions of sources.</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-5 mb-12">
+      <div class="feature-card"><div class="feature-icon" style="background:#EEF2FF">🌑</div>
+        <h3 class="font-display font-semibold text-ink mb-2" data-en="Cold Brown Dwarfs" data-es="Enanas Marrones Frías">Cold Brown Dwarfs</h3>
+        <p class="text-ink-soft text-sm leading-relaxed" data-en="Faint and extremely red objects like WISE 0855 drift across the sky and are easy to miss in static catalogs." data-es="Objetos tenues y muy rojos como WISE 0855 cruzan el cielo y son fáciles de pasar por alto en catálogos estáticos.">Faint and extremely red objects like WISE 0855 drift across the sky and are easy to miss in static catalogs.</p></div>
+      <div class="feature-card"><div class="feature-icon" style="background:#F0FDF4">💫</div>
+        <h3 class="font-display font-semibold text-ink mb-2" data-en="High Proper-Motion Stars" data-es="Estrellas de Alto Movimiento Propio">High Proper-Motion Stars</h3>
+        <p class="text-ink-soft text-sm leading-relaxed" data-en="Stars like Barnard's Star shift position between epochs. Blinking aligned images is the classic way to catch them." data-es="Estrellas como la de Barnard cambian de posición entre épocas. Parpadear imágenes alineadas es la forma clásica de detectarlas.">Stars like Barnard's Star shift position between epochs. Blinking aligned images is the classic way to catch them.</p></div>
+      <div class="feature-card"><div class="feature-icon" style="background:#FFF7ED">🔴</div>
+        <h3 class="font-display font-semibold text-ink mb-2" data-en="Variable & Young Stars" data-es="Estrellas Variables y Jóvenes">Variable & Young Stars</h3>
+        <p class="text-ink-soft text-sm leading-relaxed" data-en="T Tauri stars and Mira giants change brightness from one epoch to the next, so a single snapshot never tells the whole story." data-es="Las estrellas T Tauri y las gigantes Mira cambian de brillo entre épocas, por lo que una sola imagen nunca cuenta la historia completa.">T Tauri stars and Mira giants change brightness from one epoch to the next, so a single snapshot never tells the whole story.</p></div>
+    </div>
+    <div class="bg-white border border-border rounded-2xl p-8">
+      <div class="grid md:grid-cols-2 gap-8 items-center">
         <div>
-          <div class="font-display font-700 text-sm text-ink leading-tight tracking-tight">SPHEREx <span class="text-accent">Blink Viewer</span></div>
-          <div class="text-muted" style="font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;">NASA Space Apps · ESP-acio 32</div>
+          <div class="section-label" data-en="About the Mission" data-es="Sobre la Misión">About the Mission</div>
+          <h3 class="font-display font-bold text-ink mb-3" style="font-size:1.375rem">SPHEREx — <span class="gradient-word">NASA's Cosmic Survey</span></h3>
+          <p class="text-ink-soft text-sm leading-relaxed mb-4" data-en="NASA's wide-field infrared survey telescope maps the entire sky every six months, collecting spectra in 102 channels from 0.75 to 5 microns." data-es="El telescopio de barrido infrarrojo de campo amplio de la NASA mapea todo el cielo cada seis meses, con espectros en 102 canales de 0.75 a 5 micrones.">NASA's wide-field infrared survey telescope maps the entire sky every six months, collecting spectra in 102 channels from 0.75 to 5 microns.</p>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bg-surface rounded-xl p-3"><div class="text-xs font-bold font-display">0.75 – 5 μm</div><div class="text-xs text-muted" data-en="Wavelength Range" data-es="Rango de Longitudes de Onda">Wavelength Range</div></div>
+            <div class="bg-surface rounded-xl p-3"><div class="text-xs font-bold font-display">3.5° × 11.3°</div><div class="text-xs text-muted" data-en="Field of View" data-es="Campo de Visión">Field of View</div></div>
+            <div class="bg-surface rounded-xl p-3"><div class="text-xs font-bold font-display">4× / 2 yr</div><div class="text-xs text-muted" data-en="Sky Coverage" data-es="Cobertura del Cielo">Sky Coverage</div></div>
+            <div class="bg-surface rounded-xl p-3"><div class="text-xs font-bold font-display">6.2″ / px</div><div class="text-xs text-muted" data-en="Pixel Scale" data-es="Escala de Píxel">Pixel Scale</div></div>
+          </div>
         </div>
-      </div>
-
-      <!-- Tab Navigation -->
-      <div class="flex items-center gap-1">
-        <button class="tab-btn active" id="tab-welcome" onclick="switchTab('welcome')">
-          <span data-en="Welcome" data-es="Bienvenida">Welcome</span>
-        </button>
-        <button class="tab-btn" id="tab-viewer" onclick="switchTab('viewer')">
-          <span data-en="Interactive Viewer" data-es="Visor Interactivo">Interactive Viewer</span>
-        </button>
-      </div>
-
-      <!-- Lang Toggle -->
-      <div class="flex items-center gap-1 flex-shrink-0">
-        <button class="lang-btn active" id="lang-en" onclick="setLang('en')">EN</button>
-        <button class="lang-btn" id="lang-es" onclick="setLang('es')">ES</button>
-      </div>
-
-    </div>
-  </nav>
-
-
-  <!-- ══════════════════════════════════════════════
-       TAB 1: WELCOME
-  ══════════════════════════════════════════════ -->
-  <div id="panel-welcome" class="tab-panel active">
-
-    <!-- Hero -->
-    <section class="max-w-screen-xl mx-auto px-4 sm:px-8 pt-20 pb-16">
-      <div class="max-w-3xl mx-auto text-center">
-
-        <div class="flex items-center justify-center gap-3 mb-6 flex-wrap">
-          <span class="hero-badge">
-            <span class="dot"></span>
-            <span data-en="NASA Space Apps Challenge 2024" data-es="NASA Space Apps Challenge 2024">NASA Space Apps Challenge 2024</span>
-          </span>
-          <span class="nasa-ribbon">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
-            SPHEREx Mission · DR1
-          </span>
-        </div>
-
-        <h1 class="font-display font-700 text-ink mb-5 leading-tight" style="font-size:clamp(2rem,5vw,3.5rem);letter-spacing:-0.02em;">
-          <span data-en="Explore the" data-es="Explora el">Explore the</span><br/>
-          <span class="gradient-word" data-en="Infrared Universe" data-es="Universo Infrarrojo">Infrared Universe</span><br/>
-          <span data-en="One Blink at a Time" data-es="Un Parpadeo a la Vez">One Blink at a Time</span>
-        </h1>
-
-        <p class="text-ink-soft mb-8 max-w-2xl mx-auto leading-relaxed" style="font-size:1.0625rem;" data-en="SPHEREx Blink Viewer is a professional time-domain astronomy tool for the NASA Space Apps Challenge. Rapidly analyze transient objects, moving bodies, and variable stars across 102 near-infrared spectral bands from the SPHEREx satellite mission." data-es="SPHEREx Blink Viewer es una herramienta profesional de astronomía de dominio temporal para el NASA Space Apps Challenge. Analiza rápidamente objetos transitorios, cuerpos en movimiento y estrellas variables en 102 bandas espectrales del infrarrojo cercano de la misión SPHEREx.">
-          SPHEREx Blink Viewer is a professional time-domain astronomy tool for the NASA Space Apps Challenge. Rapidly analyze transient objects, moving bodies, and variable stars across 102 near-infrared spectral bands from the SPHEREx satellite mission.
-        </p>
-
-        <div class="flex flex-wrap items-center justify-center gap-3">
-          <button class="cta-btn" onclick="switchTab('viewer')">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            <span data-en="Launch Viewer" data-es="Abrir Visor">Launch Viewer</span>
-          </button>
-          <button class="cta-secondary" onclick="document.getElementById('problem').scrollIntoView({behavior:'smooth'})">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            <span data-en="Learn More" data-es="Saber Más">Learn More</span>
-          </button>
-        </div>
-      </div>
-    </section>
-
-    <!-- Stats Bar -->
-    <div class="max-w-screen-xl mx-auto px-4 sm:px-8 pb-16">
-      <div class="bg-white border border-border rounded-2xl p-6 grid grid-cols-2 md:grid-cols-4 gap-6" style="box-shadow:0 1px 4px rgba(13,17,23,0.06);">
-        <div class="text-center">
-          <div class="stat-number">102</div>
-          <div class="stat-label" data-en="Spectral Bands" data-es="Bandas Espectrales">Spectral Bands</div>
-        </div>
-        <div class="text-center border-l border-border">
-          <div class="stat-number">450M+</div>
-          <div class="stat-label" data-en="Catalogued Objects" data-es="Objetos Catalogados">Catalogued Objects</div>
-        </div>
-        <div class="text-center border-l border-border">
-          <div class="stat-number">0.75–5μm</div>
-          <div class="stat-label" data-en="NIR Coverage" data-es="Cobertura NIR">NIR Coverage</div>
-        </div>
-        <div class="text-center border-l border-border">
-          <div class="stat-number">All-Sky</div>
-          <div class="stat-label" data-en="Survey Footprint" data-es="Huella de Barrido">Survey Footprint</div>
-        </div>
+        <ul class="space-y-3 text-sm text-ink-soft">
+          <li class="font-semibold text-ink" data-en="Our Solution" data-es="Nuestra Solución">Our Solution</li>
+          <li data-en="✓ Frames aligned to one grid around your target, with a common brightness scale" data-es="✓ Imágenes alineadas a una misma cuadrícula alrededor de tu objetivo, con escala de brillo común">✓ Frames aligned to one grid around your target, with a common brightness scale</li>
+          <li data-en="✓ Blink player with zoom, pan, contrast, inversion and difference mode" data-es="✓ Reproductor de parpadeo con zoom, paneo, contraste, inversión y modo diferencia">✓ Blink player with zoom, pan, contrast, inversion and difference mode</li>
+          <li data-en="✓ Adjustable field of view and shareable links: ?ra=…&dec=…&fov=…" data-es="✓ Campo de visión ajustable y enlaces compartibles: ?ra=…&dec=…&fov=…">✓ Adjustable field of view and shareable links: ?ra=…&dec=…&fov=…</li>
+          <li data-en="✓ Local cache: known targets load instantly, new ones process live from IRSA" data-es="✓ Caché local: los objetivos conocidos cargan al instante, los nuevos se procesan en vivo desde IRSA">✓ Local cache: known targets load instantly, new ones process live from IRSA</li>
+        </ul>
       </div>
     </div>
+    <div class="text-center mt-12"><button class="cta-btn" onclick="switchTab('viewer')"><span data-en="Open the Interactive Viewer" data-es="Abrir el Visor Interactivo">Open the Interactive Viewer</span></button></div>
+  </section>
+</div>
 
-    <!-- Problem Statement -->
-    <section id="problem" class="max-w-screen-xl mx-auto px-4 sm:px-8 pb-20">
-      <div class="text-center mb-12">
-        <div class="section-label" data-en="The Scientific Challenge" data-es="El Reto Científico">The Scientific Challenge</div>
-        <h2 class="font-display font-700 text-ink mb-4" style="font-size:clamp(1.5rem,3vw,2.25rem);letter-spacing:-0.015em;" data-en="Time-Domain Astronomy at Infrared Scale" data-es="Astronomía de Dominio Temporal a Escala Infrarroja">Time-Domain Astronomy at Infrared Scale</h2>
-        <p class="text-ink-soft max-w-2xl mx-auto leading-relaxed" data-en="Modern sky surveys generate terabytes of multi-epoch imagery. The challenge: efficiently detect and characterize moving, variable, or transient objects hidden within massive catalogs." data-es="Los barridos modernos del cielo generan terabytes de imágenes multi-época. El reto: detectar y caracterizar eficientemente objetos en movimiento, variables o transitorios ocultos en catálogos masivos.">
-          Modern sky surveys generate terabytes of multi-epoch imagery. The challenge: efficiently detect and characterize moving, variable, or transient objects hidden within massive catalogs.
-        </p>
+<!-- TAB 2: VIEWER -->
+<div id="panel-viewer" class="tab-panel">
+  <div class="max-w-screen-xl mx-auto px-4 sm:px-6 py-6">
+    <div class="flex items-center justify-between mb-5 flex-wrap gap-3">
+      <div>
+        <h2 class="font-display font-bold text-ink" style="font-size:1.25rem" data-en="SPHEREx Interactive Blink Viewer" data-es="Visor Interactivo SPHEREx">SPHEREx Interactive Blink Viewer</h2>
+        <p class="text-muted text-xs mt-0.5" data-en="Multi-epoch near-infrared comparator · NASA/IPAC Infrared Science Archive" data-es="Comparador multi-época del infrarrojo cercano · NASA/IPAC Infrared Science Archive">Multi-epoch near-infrared comparator · NASA/IPAC Infrared Science Archive</p>
       </div>
+      <div id="status" class="status-badge idle"><span class="status-dot"></span><span>Ready</span></div>
+    </div>
 
-      <div class="grid md:grid-cols-3 gap-5 mb-12">
-        <!-- Card 1 -->
-        <div class="feature-card">
-          <div class="feature-icon" style="background:#EEF2FF;">🌑</div>
-          <h3 class="font-display font-600 text-ink mb-2" style="font-size:1rem;" data-en="Cold Brown Dwarfs" data-es="Enanas Marrones Frías">Cold Brown Dwarfs</h3>
-          <p class="text-ink-soft text-sm leading-relaxed" data-en="Sub-stellar objects like WISE 0855 emit primarily in the mid-infrared. SPHEREx's NIR sensitivity enables unprecedented detection of these elusive cold worlds across all-sky epochs." data-es="Objetos subestelares como WISE 0855 emiten principalmente en el infrarrojo medio. La sensibilidad NIR de SPHEREx permite detectar estos mundos fríos a lo largo de múltiples épocas de barrido.">
-            Sub-stellar objects like WISE 0855 emit primarily in the mid-infrared. SPHEREx's NIR sensitivity enables unprecedented detection of these elusive cold worlds across all-sky epochs.
-          </p>
-        </div>
-        <!-- Card 2 -->
-        <div class="feature-card">
-          <div class="feature-icon" style="background:#F0FDF4;">💫</div>
-          <h3 class="font-display font-600 text-ink mb-2" style="font-size:1rem;" data-en="High Proper-Motion Stars" data-es="Estrellas de Alto Movimiento Propio">High Proper-Motion Stars</h3>
-          <p class="text-ink-soft text-sm leading-relaxed" data-en="Stars like Barnard's Star shift position measurably across epochs. Multi-epoch blink comparison is the gold standard technique for identifying these rapid movers within dense star fields." data-es="Estrellas como la Estrella de Barnard desplazan su posición de forma medible entre épocas. La comparación por parpadeo multi-época es la técnica estándar para identificar movimientos en campos estelares densos.">
-            Stars like Barnard's Star shift position measurably across epochs. Multi-epoch blink comparison is the gold standard technique for identifying these rapid movers within dense star fields.
-          </p>
-        </div>
-        <!-- Card 3 -->
-        <div class="feature-card">
-          <div class="feature-icon" style="background:#FFF7ED;">🔴</div>
-          <h3 class="font-display font-600 text-ink mb-2" style="font-size:1rem;" data-en="Variable & Young Stars" data-es="Estrellas Variables y Jóvenes">Variable & Young Stars</h3>
-          <p class="text-ink-soft text-sm leading-relaxed" data-en="T Tauri variables, Mira giants, and eruptive young stellar objects show dramatic brightness changes. The SPHEREx time baseline provides a new window into these stellar life-cycle events." data-es="Las variables T Tauri, gigantes Mira y objetos estelares jóvenes eruptivos muestran cambios dramáticos de brillo. La línea de tiempo de SPHEREx abre una nueva ventana hacia estos eventos del ciclo estelar.">
-            T Tauri variables, Mira giants, and eruptive young stellar objects show dramatic brightness changes. The SPHEREx time baseline provides a new window into these stellar life-cycle events.
-          </p>
-        </div>
-      </div>
-
-      <!-- SPHEREx Mission Block -->
-      <div class="bg-white border border-border rounded-2xl p-8" style="box-shadow:0 1px 4px rgba(13,17,23,0.06);">
-        <div class="grid md:grid-cols-2 gap-8 items-center">
+    <div class="grid gap-5 viewer-grid" style="grid-template-columns:240px 1fr 220px;align-items:start">
+      <!-- Controles -->
+      <div class="viewer-panel">
+        <div class="panel-header"><i style="background:#FC3D21"></i><i style="background:#FBB723"></i><i style="background:#2CBF44"></i><span class="panel-title" data-en="Controls" data-es="Controles">Controls</span></div>
+        <div class="p-4 space-y-5">
           <div>
-            <div class="section-label mb-3" data-en="About the Mission" data-es="Sobre la Misión">About the Mission</div>
-            <h3 class="font-display font-700 text-ink mb-3" style="font-size:1.375rem;letter-spacing:-0.01em;">SPHEREx — <span class="gradient-word">NASA's Cosmic Survey</span></h3>
-            <p class="text-ink-soft text-sm leading-relaxed mb-4" data-en="The Spectro-Photometer for the History of the Universe, Epoch of Reionization and Ices Explorer is NASA's newest wide-field infrared survey telescope. It maps the entire sky four times over two years, collecting spectra in 102 channels from 0.75 to 5 microns." data-es="El Espectro-Fotómetro para la Historia del Universo, Época de Reionización y Explorador de Hielos es el más reciente telescopio de barrido infrarrojo de campo amplio de la NASA. Mapea el cielo completo cuatro veces en dos años, recopilando espectros en 102 canales de 0.75 a 5 micrones.">
-              The Spectro-Photometer for the History of the Universe, Epoch of Reionization and Ices Explorer is NASA's newest wide-field infrared survey telescope. It maps the entire sky four times over two years, collecting spectra in 102 channels from 0.75 to 5 microns.
-            </p>
-            <div class="grid grid-cols-2 gap-3">
-              <div class="bg-surface rounded-xl p-3">
-                <div class="text-xs font-700 font-display text-ink mb-1">0.75 – 5 μm</div>
-                <div class="text-xs text-muted" data-en="Wavelength Range" data-es="Rango de Longitudes de Onda">Wavelength Range</div>
-              </div>
-              <div class="bg-surface rounded-xl p-3">
-                <div class="text-xs font-700 font-display text-ink mb-1">6.2° × 2°</div>
-                <div class="text-xs text-muted" data-en="Field of View" data-es="Campo de Visión">Field of View</div>
-              </div>
-              <div class="bg-surface rounded-xl p-3">
-                <div class="text-xs font-700 font-display text-ink mb-1">≥4× / 2 yr</div>
-                <div class="text-xs text-muted" data-en="Sky Coverage Cadence" data-es="Cadencia de Cobertura">Sky Coverage Cadence</div>
-              </div>
-              <div class="bg-surface rounded-xl p-3">
-                <div class="text-xs font-700 font-display text-ink mb-1">6.2″ / px</div>
-                <div class="text-xs text-muted" data-en="Pixel Scale" data-es="Escala de Píxel">Pixel Scale</div>
-              </div>
-            </div>
+            <div class="flex items-center justify-between mb-2"><label class="section-label mb-0" for="speedSlider" data-en="Blink Speed" data-es="Velocidad de Parpadeo">Blink Speed</label><span id="speedLbl" class="text-xs font-bold font-display text-accent">5</span></div>
+            <input type="range" id="speedSlider" class="custom-slider" min="1" max="10" value="5" oninput="document.getElementById('speedLbl').textContent=this.value" />
           </div>
+          <div>
+            <div class="flex items-center justify-between mb-2"><label class="section-label mb-0" for="zoomSlider" data-en="Zoom" data-es="Zoom">Zoom</label><span id="zoomLbl" class="text-xs font-bold font-display text-accent">1.0×</span></div>
+            <input type="range" id="zoomSlider" class="custom-slider" min="0.5" max="4" step="0.1" value="1" />
+            <p class="text-muted mt-1.5" style="font-size:.625rem" data-en="Wheel to zoom · drag to pan · double-click to reset" data-es="Rueda para zoom · arrastra para mover · doble clic para restablecer">Wheel to zoom · drag to pan · double-click to reset</p>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-2"><label class="section-label mb-0" for="contrastSlider" data-en="Contrast" data-es="Contraste">Contrast</label><span id="contrastLbl" class="text-xs font-bold font-display text-accent">100%</span></div>
+            <input type="range" id="contrastSlider" class="custom-slider" min="50" max="300" value="100" />
+          </div>
+          <div class="border-t border-border"></div>
           <div class="space-y-3">
-            <div class="text-sm font-600 text-ink mb-2" data-en="Our Solution" data-es="Nuestra Solución">Our Solution</div>
-            <div class="flex items-start gap-3">
-              <div style="width:28px;height:28px;border-radius:8px;background:#EEF2FF;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1A56DB" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-              </div>
-              <p class="text-sm text-ink-soft" data-en="FastAPI backend streams multi-epoch FITS frames directly from NASA/IRSA with asynchronous parallel processing" data-es="Backend FastAPI transmite marcos FITS multi-época directamente desde NASA/IRSA con procesamiento paralelo asíncrono">FastAPI backend streams multi-epoch FITS frames directly from NASA/IRSA with asynchronous parallel processing</p>
-            </div>
-            <div class="flex items-start gap-3">
-              <div style="width:28px;height:28px;border-radius:8px;background:#EEF2FF;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1A56DB" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-              </div>
-              <p class="text-sm text-ink-soft" data-en="Intelligent local cache system: pre-computed targets load instantly, new coordinates process live from IRSA SIA" data-es="Sistema de caché local inteligente: los objetivos pre-computados cargan al instante, las nuevas coordenadas se procesan en vivo desde IRSA SIA">Intelligent local cache system: pre-computed targets load instantly, new coordinates process live from IRSA SIA</p>
-            </div>
-            <div class="flex items-start gap-3">
-              <div style="width:28px;height:28px;border-radius:8px;background:#EEF2FF;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1A56DB" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-              </div>
-              <p class="text-sm text-ink-soft" data-en="Interactive blink comparator with adjustable playback speed, zoom, contrast, pixel inversion, and difference mode" data-es="Comparador de parpadeo interactivo con velocidad de reproducción, zoom, contraste, inversión de píxeles y modo diferencia ajustables">Interactive blink comparator with adjustable playback speed, zoom, contrast, pixel inversion, and difference mode</p>
-            </div>
-            <div class="flex items-start gap-3">
-              <div style="width:28px;height:28px;border-radius:8px;background:#EEF2FF;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1A56DB" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-              </div>
-              <p class="text-sm text-ink-soft" data-en="Pre-loaded science targets: cold brown dwarfs, high proper-motion stars, variable stars, galaxies" data-es="Objetivos científicos pre-cargados: enanas marrones frías, estrellas de alto movimiento propio, estrellas variables, galaxias">Pre-loaded science targets: cold brown dwarfs, high proper-motion stars, variable stars, galaxies</p>
-            </div>
+            <div class="section-label" data-en="Image Modes" data-es="Modos de Imagen">Image Modes</div>
+            <label class="flex items-center gap-3 cursor-pointer"><input type="checkbox" id="invertCheck" class="custom-check" onchange="applyFilters()" />
+              <div><div class="text-sm font-medium text-ink" data-en="Invert Pixels" data-es="Invertir Píxeles">Invert Pixels</div><div class="text-muted" style="font-size:.6875rem" data-en="Negative image mode" data-es="Modo imagen negativa">Negative image mode</div></div></label>
+            <label class="flex items-center gap-3 cursor-pointer"><input type="checkbox" id="diffCheck" class="custom-check" onchange="toggleDifference()" />
+              <div><div class="text-sm font-medium text-ink" data-en="Difference Mode" data-es="Modo Diferencia">Difference Mode</div><div class="text-muted" style="font-size:.6875rem" data-en="Frame minus median of all epochs" data-es="Cuadro menos la mediana de todas las épocas">Frame minus median of all epochs</div></div></label>
+          </div>
+          <div class="border-t border-border"></div>
+          <div>
+            <div class="section-label" data-en="Session Info" data-es="Info de Sesión">Session Info</div>
+            <div class="info-row"><span class="info-label" data-en="Frames" data-es="Marcos">Frames</span><span id="frameInfo" class="info-value">—</span></div>
+            <div class="info-row"><span class="info-label" data-en="Source" data-es="Fuente">Source</span><span id="sourceInfo" class="info-value" style="font-size:.6875rem">—</span></div>
           </div>
         </div>
       </div>
 
-      <!-- Bottom CTA -->
-      <div class="text-center mt-12">
-        <button class="cta-btn" onclick="switchTab('viewer')">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          <span data-en="Open the Interactive Viewer" data-es="Abrir el Visor Interactivo">Open the Interactive Viewer</span>
-        </button>
+      <!-- Visor -->
+      <div class="viewer-panel flex flex-col">
+        <div class="panel-header"><i style="background:#FC3D21"></i><i style="background:#FBB723"></i><i style="background:#2CBF44"></i><span class="panel-title" data-en="Sky Region Viewer" data-es="Visor de Región Celeste">Sky Region Viewer</span>
+          <span class="ml-auto text-muted" style="font-size:.6875rem">ICRS J2000 · SPHEREx DR1</span></div>
+        <div class="p-4 border-b border-border">
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div><label class="field-label" for="ra" data-en="Right Ascension (°)" data-es="Ascensión Recta (°)">Right Ascension (°)</label><input type="number" id="ra" class="coord-input" placeholder="e.g. 133.795" step="0.001" /></div>
+            <div><label class="field-label" for="dec" data-en="Declination (°)" data-es="Declinación (°)">Declination (°)</label><input type="number" id="dec" class="coord-input" placeholder="e.g. -7.245" step="0.001" /></div>
+          </div>
+          <div class="mb-3">
+            <div class="flex items-center justify-between"><label class="field-label" for="fovSlider" data-en="Field of View" data-es="Campo de Visión">Field of View</label><span id="fovLbl" class="text-xs font-bold font-display text-accent">10′</span></div>
+            <input type="range" id="fovSlider" class="custom-slider" min="2" max="60" step="1" value="10" oninput="document.getElementById('fovLbl').textContent=this.value+'′'" />
+          </div>
+          <button class="load-btn" onclick="loadTarget()" id="loadBtn"><i class="spinner" id="loadSpin"></i><span data-en="Load Sky Region" data-es="Cargar Región Celeste">Load Sky Region</span></button>
+        </div>
+
+        <div class="viewer-wrapper" id="vp">
+          <div id="stage"><img id="blinkImg" src="" alt="SPHEREx" style="display:none" draggable="false" /></div>
+          <i class="rc tl"></i><i class="rc tr"></i><i class="rc bl"></i><i class="rc br"></i><i class="cross-h"></i><i class="cross-v"></i>
+          <button class="reset-btn" onclick="resetView()" data-en="Reset view" data-es="Restablecer vista">Reset view</button>
+          <div class="viewer-idle" id="viewerIdle">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="opacity:.3"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg>
+            <span data-en="Enter coordinates and load a sky region" data-es="Ingresa coordenadas y carga una región celeste">Enter coordinates and load a sky region</span>
+            <span style="font-size:.6875rem;opacity:.7" data-en="or select a preset target from the right panel" data-es="o selecciona un objetivo del panel derecho">or select a preset target from the right panel</span>
+          </div>
+          <div id="loadingOverlay"><div class="loading-ring"></div><span data-en="Querying NASA/IRSA Archive…" data-es="Consultando Archivo NASA/IRSA…">Querying NASA/IRSA Archive…</span></div>
+        </div>
+
+        <div class="p-4 border-t border-border">
+          <div class="flex items-center gap-3 mb-3">
+            <button id="playBtn" class="play-btn" onclick="togglePlay()" disabled aria-label="Play / Pause"><svg id="playIcon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg></button>
+            <div class="flex-1"><input type="range" id="timeline" min="0" max="0" value="0" onchange="onTimelineChange(this.value)" aria-label="Timeline" /></div>
+            <span id="timelineLabel" style="font-size:.6875rem;font-family:'Space Grotesk',monospace;color:#8A93A8;white-space:nowrap;min-width:36px;text-align:right">0 / 0</span>
+          </div>
+          <div class="grid grid-cols-3 gap-2">
+            <div class="bg-surface rounded-lg p-2 text-center"><div class="mini-lbl" data-en="Status" data-es="Estado">Status</div><div id="statusInline" class="mini-val">—</div></div>
+            <div class="bg-surface rounded-lg p-2 text-center"><div class="mini-lbl" data-en="Current Epoch" data-es="Época Actual">Current Epoch</div><div id="epochDisplay" class="mini-val" style="font-family:'Space Grotesk',monospace">—</div></div>
+            <div class="bg-surface rounded-lg p-2 text-center"><div class="mini-lbl" data-en="Data Source" data-es="Fuente de Datos">Data Source</div><div id="sourceDisplay" class="mini-val">—</div></div>
+          </div>
+        </div>
       </div>
-    </section>
 
-  </div><!-- /panel-welcome -->
-
-
-  <!-- ══════════════════════════════════════════════
-       TAB 2: VIEWER
-  ══════════════════════════════════════════════ -->
-  <div id="panel-viewer" class="tab-panel">
-    <div class="max-w-screen-xl mx-auto px-4 sm:px-6 py-6">
-
-      <!-- Viewer Header -->
-      <div class="flex items-center justify-between mb-5 flex-wrap gap-3">
-        <div>
-          <h2 class="font-display font-700 text-ink" style="font-size:1.25rem;letter-spacing:-0.01em;" data-en="SPHEREx Interactive Blink Viewer" data-es="Visor Interactivo SPHEREx">SPHEREx Interactive Blink Viewer</h2>
-          <p class="text-muted text-xs mt-0.5" data-en="Multi-epoch near-infrared time-domain comparator · NASA/IPAC Infrared Science Archive" data-es="Comparador de dominio temporal multi-época NIR · NASA/IPAC Infrared Science Archive">Multi-epoch near-infrared time-domain comparator · NASA/IPAC Infrared Science Archive</p>
-        </div>
-        <div class="flex items-center gap-2">
-          <div id="status" class="status-badge idle">
-            <span class="status-dot"></span>
-            <span data-en="Ready" data-es="Listo">Ready</span>
-          </div>
+      <!-- Objetivos -->
+      <div class="viewer-panel">
+        <div class="panel-header"><i style="background:#FC3D21"></i><i style="background:#FBB723"></i><i style="background:#2CBF44"></i><span class="panel-title" data-en="Science Targets" data-es="Objetivos Científicos">Science Targets</span></div>
+        <div class="p-3 space-y-2">
+          <p class="text-muted mb-3" style="font-size:.6875rem" data-en="Click a target to load it" data-es="Haz clic en un objetivo para cargarlo">Click a target to load it</p>
+          <div id="presets" class="space-y-2"></div>
         </div>
       </div>
-
-      <!-- 3-Column Grid -->
-      <div class="grid gap-5 viewer-grid" style="grid-template-columns:240px 1fr 220px;align-items:start;">
-
-        <!-- ── LEFT PANEL: Controls ── -->
-        <div class="viewer-panel">
-          <div class="panel-header">
-            <div class="panel-header-dot" style="background:#FC3D21;"></div>
-            <div class="panel-header-dot" style="background:#FBB723;"></div>
-            <div class="panel-header-dot" style="background:#2CBF44;"></div>
-            <span class="text-muted ml-1 font-600" style="font-size:0.6875rem;letter-spacing:0.06em;text-transform:uppercase;" data-en="Controls" data-es="Controles">Controls</span>
-          </div>
-          <div class="p-4 space-y-5">
-
-            <!-- Speed -->
-            <div>
-              <div class="flex items-center justify-between mb-2">
-                <label class="section-label mb-0" for="speedSlider" data-en="Blink Speed" data-es="Velocidad de Parpadeo">Blink Speed</label>
-                <span id="speedLbl" class="text-xs font-700 font-display text-accent">5</span>
-              </div>
-              <input type="range" id="speedSlider" class="custom-slider" min="1" max="10" value="5"
-                oninput="document.getElementById('speedLbl').textContent=this.value" />
-              <div class="flex justify-between text-muted mt-1" style="font-size:0.625rem;">
-                <span data-en="Slow" data-es="Lento">Slow</span>
-                <span data-en="Fast" data-es="Rápido">Fast</span>
-              </div>
-            </div>
-
-            <!-- Zoom -->
-            <div>
-              <div class="flex items-center justify-between mb-2">
-                <label class="section-label mb-0" for="zoomSlider" data-en="Zoom" data-es="Zoom">Zoom</label>
-                <span id="zoomLbl" class="text-xs font-700 font-display text-accent">1.0×</span>
-              </div>
-              <input type="range" id="zoomSlider" class="custom-slider" min="0.5" max="4" step="0.1" value="1.0"
-                oninput="document.getElementById('zoomLbl').textContent=parseFloat(this.value).toFixed(1)+'×'; applyFilters();" />
-              <div class="flex justify-between text-muted mt-1" style="font-size:0.625rem;">
-                <span>0.5×</span>
-                <span>4×</span>
-              </div>
-            </div>
-
-            <!-- Contrast -->
-            <div>
-              <div class="flex items-center justify-between mb-2">
-                <label class="section-label mb-0" for="contrastSlider" data-en="Contrast" data-es="Contraste">Contrast</label>
-                <span id="contrastLbl" class="text-xs font-700 font-display text-accent">100%</span>
-              </div>
-              <input type="range" id="contrastSlider" class="custom-slider" min="50" max="300" value="100"
-                oninput="document.getElementById('contrastLbl').textContent=this.value+'%'; applyFilters();" />
-              <div class="flex justify-between text-muted mt-1" style="font-size:0.625rem;">
-                <span>50%</span>
-                <span>300%</span>
-              </div>
-            </div>
-
-            <!-- Divider -->
-            <div class="border-t border-border"></div>
-
-            <!-- Checkboxes -->
-            <div class="space-y-3">
-              <div class="section-label" data-en="Image Modes" data-es="Modos de Imagen">Image Modes</div>
-              <label class="flex items-center gap-3 cursor-pointer group">
-                <input type="checkbox" id="invertCheck" class="custom-check" onchange="applyFilters()" />
-                <div>
-                  <div class="text-sm font-500 text-ink group-hover:text-accent transition-colors" data-en="Invert Pixels" data-es="Invertir Píxeles">Invert Pixels</div>
-                  <div class="text-muted" style="font-size:0.6875rem;" data-en="Negative image mode" data-es="Modo imagen negativa">Negative image mode</div>
-                </div>
-              </label>
-              <label class="flex items-center gap-3 cursor-pointer group">
-                <input type="checkbox" id="diffCheck" class="custom-check" onchange="toggleDifference()" />
-                <div>
-                  <div class="text-sm font-500 text-ink group-hover:text-accent transition-colors" data-en="Difference Mode" data-es="Modo Diferencia">Difference Mode</div>
-                  <div class="text-muted" style="font-size:0.6875rem;" data-en="Highlight frame changes" data-es="Resaltar cambios entre marcos">Highlight frame changes</div>
-                </div>
-              </label>
-            </div>
-
-            <!-- Divider -->
-            <div class="border-t border-border"></div>
-
-            <!-- Info Section -->
-            <div class="space-y-0">
-              <div class="section-label" data-en="Session Info" data-es="Info de Sesión">Session Info</div>
-              <div class="info-row">
-                <span class="info-label" data-en="Frames" data-es="Marcos">Frames</span>
-                <span id="frameInfo" class="info-value">—</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label" data-en="Source" data-es="Fuente">Source</span>
-                <span id="sourceInfo" class="info-value" style="font-size:0.6875rem;">—</span>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        <!-- ── CENTER PANEL: Viewer ── -->
-        <div class="viewer-panel flex flex-col">
-          <div class="panel-header">
-            <div class="panel-header-dot" style="background:#FC3D21;"></div>
-            <div class="panel-header-dot" style="background:#FBB723;"></div>
-            <div class="panel-header-dot" style="background:#2CBF44;"></div>
-            <span class="text-muted ml-1 font-600" style="font-size:0.6875rem;letter-spacing:0.06em;text-transform:uppercase;" data-en="Sky Region Viewer" data-es="Visor de Región Celeste">Sky Region Viewer</span>
-            <div class="ml-auto flex items-center gap-1.5">
-              <span class="text-muted" style="font-size:0.6875rem;">ICRS J2000</span>
-              <div style="width:1px;height:12px;background:#E5E8EF;"></div>
-              <span class="text-muted" style="font-size:0.6875rem;">SPHEREx DR1</span>
-            </div>
-          </div>
-
-          <!-- Coordinate Inputs -->
-          <div class="p-4 border-b border-border">
-            <div class="grid grid-cols-2 gap-3 mb-3">
-              <div>
-                <label class="block mb-1.5" style="font-size:0.6875rem;font-weight:600;color:#8A93A8;letter-spacing:0.06em;text-transform:uppercase;" data-en="Right Ascension (°)" data-es="Ascensión Recta (°)">Right Ascension (°)</label>
-                <input type="number" id="ra" class="coord-input" placeholder="e.g. 133.796" step="0.001" />
-              </div>
-              <div>
-                <label class="block mb-1.5" style="font-size:0.6875rem;font-weight:600;color:#8A93A8;letter-spacing:0.06em;text-transform:uppercase;" data-en="Declination (°)" data-es="Declinación (°)">Declination (°)</label>
-                <input type="number" id="dec" class="coord-input" placeholder="e.g. -7.245" step="0.001" />
-              </div>
-            </div>
-            <button class="load-btn" onclick="loadTarget()" id="loadBtn">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <span data-en="Load Sky Region" data-es="Cargar Región Celeste">Load Sky Region</span>
-            </button>
-          </div>
-
-          <!-- Image Viewer -->
-          <div class="viewer-wrapper" style="border-radius:0;">
-            <!-- Reticle -->
-            <div class="reticle-corner tl"></div>
-            <div class="reticle-corner tr"></div>
-            <div class="reticle-corner bl"></div>
-            <div class="reticle-corner br"></div>
-            <div class="crosshair-h" id="crossH"></div>
-            <div class="crosshair-v" id="crossV"></div>
-
-            <!-- The Blink Image -->
-            <img id="blinkImg" src="" alt="" style="display:none;" />
-
-            <!-- Idle Placeholder -->
-            <div class="viewer-idle" id="viewerIdle">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
-              <span data-en="Enter coordinates and load a sky region" data-es="Ingresa coordenadas y carga una región celeste">Enter coordinates and load a sky region</span>
-              <span style="font-size:0.6875rem;opacity:0.7;" data-en="or select a preset target from the right panel" data-es="o selecciona un objetivo preestablecido del panel derecho">or select a preset target from the right panel</span>
-            </div>
-
-            <!-- Loading Overlay -->
-            <div id="loadingOverlay">
-              <div class="loading-ring"></div>
-              <span id="loadingMsg" data-en="Querying NASA/IRSA Archive…" data-es="Consultando Archivo NASA/IRSA…">Querying NASA/IRSA Archive…</span>
-            </div>
-          </div>
-
-          <!-- Playback Controls -->
-          <div class="p-4 border-t border-border">
-            <div class="flex items-center gap-3 mb-3">
-              <button id="playBtn" class="play-btn" onclick="togglePlay()" disabled>
-                <svg id="playIcon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-              </button>
-              <div class="flex-1">
-                <input type="range" id="timeline" min="0" max="0" value="0" onchange="onTimelineChange(this.value)" />
-              </div>
-              <span id="timelineLabel" style="font-size:0.6875rem;font-family:'Space Grotesk',monospace;color:#8A93A8;white-space:nowrap;min-width:36px;text-align:right;">0 / 0</span>
-            </div>
-            <div class="grid grid-cols-3 gap-2">
-              <div class="bg-surface rounded-lg p-2 text-center">
-                <div class="text-muted" style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.08em;font-weight:600;" data-en="Status" data-es="Estado">Status</div>
-                <div id="statusInline" style="font-size:0.75rem;font-weight:600;color:#0D1117;margin-top:2px;">—</div>
-              </div>
-              <div class="bg-surface rounded-lg p-2 text-center">
-                <div class="text-muted" style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.08em;font-weight:600;" data-en="Current Epoch" data-es="Época Actual">Current Epoch</div>
-                <div id="epochDisplay" style="font-size:0.75rem;font-weight:600;color:#0D1117;font-family:'Space Grotesk',monospace;margin-top:2px;">—</div>
-              </div>
-              <div class="bg-surface rounded-lg p-2 text-center">
-                <div class="text-muted" style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.08em;font-weight:600;" data-en="Data Source" data-es="Fuente de Datos">Data Source</div>
-                <div id="sourceDisplay" style="font-size:0.75rem;font-weight:600;color:#0D1117;margin-top:2px;">—</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ── RIGHT PANEL: Targets ── -->
-        <div class="viewer-panel">
-          <div class="panel-header">
-            <div class="panel-header-dot" style="background:#FC3D21;"></div>
-            <div class="panel-header-dot" style="background:#FBB723;"></div>
-            <div class="panel-header-dot" style="background:#2CBF44;"></div>
-            <span class="text-muted ml-1 font-600" style="font-size:0.6875rem;letter-spacing:0.06em;text-transform:uppercase;" data-en="Science Targets" data-es="Objetivos Científicos">Science Targets</span>
-          </div>
-          <div class="p-3 space-y-2">
-            <p class="text-muted mb-3" style="font-size:0.6875rem;" data-en="Click a target to load instantly" data-es="Haz clic en un objetivo para cargar al instante">Click a target to load instantly</p>
-
-            <!-- Target Cards -->
-            <div class="target-card" onclick="setPreset(133.796, -7.245); setActiveTarget(this)">
-              <div class="target-icon">🌑</div>
-              <div>
-                <div class="target-name">WISE 0855</div>
-                <div class="target-type" data-en="Cold brown dwarf" data-es="Enana marrón fría">Cold brown dwarf</div>
-                <div class="target-coords">RA 133.796 / Dec −7.245</div>
-              </div>
-            </div>
-
-            <div class="target-card" onclick="setPreset(210.802, 54.348); setActiveTarget(this)">
-              <div class="target-icon">🌀</div>
-              <div>
-                <div class="target-name">M101 Galaxy</div>
-                <div class="target-type" data-en="Spiral galaxy" data-es="Galaxia espiral">Spiral galaxy</div>
-                <div class="target-coords">RA 210.802 / Dec 54.348</div>
-              </div>
-            </div>
-
-            <div class="target-card" onclick="setPreset(133.797, -7.245); setActiveTarget(this)">
-              <div class="target-icon">⭐</div>
-              <div>
-                <div class="target-name">Object 1 (D2)</div>
-                <div class="target-type" data-en="Variable candidate" data-es="Candidato variable">Variable candidate</div>
-                <div class="target-coords">RA 133.797 / Dec −7.245</div>
-              </div>
-            </div>
-
-            <div class="target-card" onclick="setPreset(269.452, 4.693); setActiveTarget(this)">
-              <div class="target-icon">🔴</div>
-              <div>
-                <div class="target-name">Barnard's Star</div>
-                <div class="target-type" data-en="High proper motion red dwarf" data-es="Enana roja de alto movimiento">High proper motion red dwarf</div>
-                <div class="target-coords">RA 269.452 / Dec 4.693</div>
-              </div>
-            </div>
-
-            <div class="target-card" onclick="setPreset(330.840, -56.787); setActiveTarget(this)">
-              <div class="target-icon">🟤</div>
-              <div>
-                <div class="target-name">Epsilon Indi B</div>
-                <div class="target-type" data-en="Nearby brown dwarf" data-es="Enana marrón cercana">Nearby brown dwarf</div>
-                <div class="target-coords">RA 330.840 / Dec −56.787</div>
-              </div>
-            </div>
-
-            <div class="target-card" onclick="setPreset(76.558, 30.401); setActiveTarget(this)">
-              <div class="target-icon">💥</div>
-              <div>
-                <div class="target-name">RW Aurigae</div>
-                <div class="target-type" data-en="Young variable star" data-es="Estrella variable joven">Young variable star</div>
-                <div class="target-coords">RA 76.558 / Dec 30.401</div>
-              </div>
-            </div>
-
-            <div class="target-card" onclick="setPreset(304.693, 42.443); setActiveTarget(this)">
-              <div class="target-icon">❤️</div>
-              <div>
-                <div class="target-name">R Draconis</div>
-                <div class="target-type" data-en="Mira-type red giant" data-es="Gigante roja tipo Mira">Mira-type red giant</div>
-                <div class="target-coords">RA 304.693 / Dec 42.443</div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-      </div><!-- /viewer-grid -->
     </div>
-  </div><!-- /panel-viewer -->
+  </div>
+</div>
 
-
-  <!-- ══════════════════════════════════════════════
-       FOOTER
-  ══════════════════════════════════════════════ -->
-  <footer class="footer mt-auto">
-    <div class="max-w-screen-xl mx-auto text-center space-y-2">
-      <p class="text-muted leading-relaxed" style="font-size:0.6875rem;max-width:72ch;margin:0 auto;">
-        This publication makes use of data products from the Spectro-Photometer for the History of the Universe, Epoch of Reionization and Ices Explorer (SPHEREx), which is a joint project of the Jet Propulsion Laboratory and the California Institute of Technology, and is funded by the National Aeronautics and Space Administration.
-      </p>
-      <p class="font-600 text-ink-soft" style="font-size:0.75rem;">
-        Author: <span class="text-accent">ESP-acio 32</span> &nbsp;·&nbsp; NASA Space Apps Challenge
-      </p>
-    </div>
-  </footer>
-
-</div><!-- /shell -->
-
-<!-- ═══════════════════════════════════════════════════════════
-     ZOOM CON PANEO + PARTÍCULAS EXTRA
-     Pegar tal cual, justo antes de </body> (después de tu <script>).
-     No modifica ningún otro código de tu archivo.
-════════════════════════════════════════════════════════════ -->
-<style>
-  .viewer-wrapper { touch-action: none; user-select: none; }
-  .viewer-wrapper.zoomed { cursor: grab; }
-  .viewer-wrapper.drag { cursor: grabbing; }
-  #vStage { position: absolute; inset: 0; transform-origin: 0 0; will-change: transform; }
-  #blinkImg { pointer-events: none; -webkit-user-drag: none; }
-  #starCanvas2 { position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: 0.55; }
-</style>
-<canvas id="starCanvas2" aria-hidden="true"></canvas>
+<footer class="footer mt-auto">
+  <div class="max-w-screen-xl mx-auto text-center space-y-2">
+    <p class="text-muted leading-relaxed" style="font-size:.6875rem;max-width:72ch;margin:0 auto">This publication makes use of data products from the Spectro-Photometer for the History of the Universe, Epoch of Reionization and Ices Explorer (SPHEREx), which is a joint project of the Jet Propulsion Laboratory and the California Institute of Technology, and is funded by the National Aeronautics and Space Administration.</p>
+    <p class="font-semibold text-ink-soft" style="font-size:.75rem">Author: <span class="text-accent">ESP-acio 32</span></p>
+  </div>
+</footer>
+</div>
 
 <script>
-/* ════════════ ZOOM + PANEO ════════════ */
-(function () {
-  const wrap = document.querySelector('.viewer-wrapper');
-  const img  = document.getElementById('blinkImg');
-  const zs   = document.getElementById('zoomSlider');
-  const zl   = document.getElementById('zoomLbl');
+const $ = id => document.getElementById(id);
 
-  // La imagen pasa a un "escenario" que se mueve y escala; retícula y overlays quedan fijos
-  const stage = document.createElement('div');
-  stage.id = 'vStage';
-  wrap.insertBefore(stage, img);
-  stage.appendChild(img);
+/* ═══════ OBJETIVOS ═══════ */
+// "Object 1 (D2)": confirma las coordenadas de tu candidato real.
+const PRESETS = [
+  { n: 'WISE 0855',     ic: '🌑', ra: 133.795, dec: -7.245,  en: 'Cold brown dwarf',            es: 'Enana marrón fría' },
+  { n: 'M101 Galaxy',   ic: '🌀', ra: 210.802, dec: 54.349,  en: 'Spiral galaxy',               es: 'Galaxia espiral' },
+  { n: 'Object 1 (D2)', ic: '⭐', ra: 133.797, dec: -7.245,  en: 'Variable candidate',          es: 'Candidato variable' },
+  { n: 'Barnard’s Star',ic: '🔴', ra: 269.452, dec: 4.693,   en: 'High proper motion red dwarf',es: 'Enana roja de alto movimiento' },
+  { n: 'Epsilon Indi B',ic: '🟤', ra: 331.044, dec: -56.783, en: 'Nearby brown dwarf',          es: 'Enana marrón cercana' },
+  { n: 'RW Aurigae',    ic: '💥', ra: 76.957,  dec: 30.401,  en: 'Young variable star',         es: 'Estrella variable joven' },
+  { n: 'R Draconis',    ic: '❤️', ra: 248.170, dec: 66.755,  en: 'Mira-type red giant',         es: 'Gigante roja tipo Mira' }
+];
+$('presets').innerHTML = PRESETS.map(p => `
+  <div class="target-card" onclick="setPreset(${p.ra}, ${p.dec}); setActiveTarget(this)">
+    <div class="target-icon">${p.ic}</div>
+    <div><div class="target-name">${p.n}</div>
+      <div class="target-type" data-en="${p.en}" data-es="${p.es}">${p.en}</div>
+      <div class="target-coords">RA ${p.ra} / Dec ${p.dec}</div></div>
+  </div>`).join('');
 
-  let Z = 1, X = 0, Y = 0, lastSlider = zs.value;
-
-  function view() {
-    const w = wrap.clientWidth, h = wrap.clientHeight;
-    const lim = (v, s) => Z < 1 ? s * (1 - Z) / 2 : Math.min(0, Math.max(s * (1 - Z), v));
-    X = lim(X, w); Y = lim(Y, h);
-    stage.style.transform = `translate(${X}px,${Y}px) scale(${Z})`;
-    zs.value = Z; lastSlider = zs.value;
-    zl.textContent = Z.toFixed(1) + '×';
-    wrap.classList.toggle('zoomed', Z > 1);
-  }
-  // Zoom manteniendo fijo el punto (cx, cy) bajo el cursor
-  function zoomAt(nz, cx, cy) {
-    nz = Math.min(4, Math.max(0.5, nz));
-    const r = nz / Z;
-    X = cx - (cx - X) * r; Y = cy - (cy - Y) * r; Z = nz;
-    view();
-  }
-  const local = e => { const r = wrap.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
-
-  // applyFilters ya no escala la imagen: aplica filtros y sincroniza el slider con el escenario
-  window.applyFilters = function () {
-    const c = parseInt(document.getElementById('contrastSlider').value) || 100;
-    const inv = document.getElementById('invertCheck').checked;
-    img.style.filter = (inv ? 'invert(1) ' : '') + `contrast(${c}%)`;
-    img.style.transform = '';
-    if (zs.value !== lastSlider) zoomAt(parseFloat(zs.value) || 1, wrap.clientWidth / 2, wrap.clientHeight / 2);
-  };
-
-  // Al cargar otra región, la vista vuelve al encuadre completo
-  const _load = window.loadTarget;
-  window.loadTarget = function () { Z = 1; X = 0; Y = 0; view(); return _load.apply(this, arguments); };
-
-  // Rueda: zoom hacia el cursor
-  wrap.addEventListener('wheel', e => {
-    e.preventDefault();
-    const [x, y] = local(e);
-    zoomAt(Z * Math.exp(-e.deltaY * 0.0018), x, y);
-  }, { passive: false });
-
-  // Doble clic: acerca 3× en ese punto; si ya hay zoom, restablece
-  wrap.addEventListener('dblclick', e => {
-    const [x, y] = local(e);
-    if (Z !== 1) { Z = 1; X = 0; Y = 0; view(); } else zoomAt(3, x, y);
+/* ═══════ IDIOMAS ═══════ */
+let currentLang = 'en';
+const MSG = {
+  en: { ready: 'Ready', loading: 'Querying NASA/IRSA…', invalid: 'Invalid coordinates', error: 'Load error', ph1: 'e.g. 133.795', ph2: 'e.g. -7.245' },
+  es: { ready: 'Listo', loading: 'Consultando NASA/IRSA…', invalid: 'Coordenadas inválidas', error: 'Error de carga', ph1: 'ej. 133.795', ph2: 'ej. -7.245' }
+};
+let statusKey = 'ready', statusState = 'idle';
+function setStatus(state, key) {
+  statusState = state; statusKey = key;
+  const txt = String(MSG[currentLang][key] || key).replace(/[<>&]/g, '').slice(0, 70);
+  $('status').className = 'status-badge ' + state;
+  $('status').lastElementChild.textContent = txt;
+  $('statusInline').textContent = txt;
+}
+function setLang(lang) {
+  currentLang = lang;
+  document.documentElement.lang = lang;
+  $('lang-en').classList.toggle('active', lang === 'en');
+  $('lang-es').classList.toggle('active', lang === 'es');
+  document.querySelectorAll('[data-en]').forEach(el => { const t = el.getAttribute('data-' + lang); if (t) el.textContent = t; });
+  $('ra').placeholder = MSG[lang].ph1; $('dec').placeholder = MSG[lang].ph2;
+  setStatus(statusState, statusKey);
+}
+function switchTab(tab) {
+  ['welcome', 'viewer'].forEach(t => {
+    $('panel-' + t).classList.toggle('active', t === tab);
+    $('tab-' + t).classList.toggle('active', t === tab);
   });
+  scrollTo({ top: 0, behavior: 'smooth' });
+}
+function setActiveTarget(el) {
+  document.querySelectorAll('.target-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
 
-  // Arrastrar para moverse (mouse y táctil) + pellizco con dos dedos
-  const ptrs = new Map(); let pinch = 0;
-  wrap.addEventListener('pointerdown', e => {
-    wrap.setPointerCapture(e.pointerId);
-    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    wrap.classList.add('drag');
-    if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = Math.hypot(a.x - b.x, a.y - b.y); }
-  });
-  wrap.addEventListener('pointermove', e => {
-    const p = ptrs.get(e.pointerId); if (!p) return;
-    if (ptrs.size === 2) {
-      p.x = e.clientX; p.y = e.clientY;
-      const [a, b] = [...ptrs.values()], d = Math.hypot(a.x - b.x, a.y - b.y), r = wrap.getBoundingClientRect();
-      if (pinch) zoomAt(Z * d / pinch, (a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top);
-      pinch = d;
-    } else {
-      X += e.clientX - p.x; Y += e.clientY - p.y; p.x = e.clientX; p.y = e.clientY; view();
-    }
-  });
-  const end = e => { ptrs.delete(e.pointerId); pinch = 0; if (!ptrs.size) wrap.classList.remove('drag'); };
-  wrap.addEventListener('pointerup', end);
-  wrap.addEventListener('pointercancel', end);
-  window.addEventListener('resize', view);
-  view();
-})();
+/* ═══════ ZOOM + PANEO ═══════ */
+const vp = $('vp'), stage = $('stage'), img = $('blinkImg');
+let Z = 1, X = 0, Y = 0, lastSlider = $('zoomSlider').value;
+function view() {
+  const w = vp.clientWidth, h = vp.clientHeight;
+  const lim = (v, s) => Z < 1 ? s * (1 - Z) / 2 : Math.min(0, Math.max(s * (1 - Z), v));
+  X = lim(X, w); Y = lim(Y, h);
+  stage.style.transform = `translate(${X}px,${Y}px) scale(${Z})`;
+  $('zoomSlider').value = Z; lastSlider = $('zoomSlider').value;
+  $('zoomLbl').textContent = Z.toFixed(1) + '×';
+  vp.classList.toggle('zoomed', Z > 1);
+}
+function zoomAt(nz, cx, cy) {            // mantiene fijo el punto bajo el cursor
+  nz = Math.min(4, Math.max(0.5, nz));
+  const r = nz / Z; X = cx - (cx - X) * r; Y = cy - (cy - Y) * r; Z = nz; view();
+}
+function resetView() { Z = 1; X = 0; Y = 0; view(); }
+const local = e => { const r = vp.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+vp.addEventListener('wheel', e => { e.preventDefault(); const [x, y] = local(e); zoomAt(Z * Math.exp(-e.deltaY * 0.0018), x, y); }, { passive: false });
+vp.addEventListener('dblclick', e => { const [x, y] = local(e); Z !== 1 ? resetView() : zoomAt(3, x, y); });
+const ptrs = new Map(); let pinch = 0;
+vp.addEventListener('pointerdown', e => {
+  if (e.target.closest('.reset-btn')) return;
+  vp.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); vp.classList.add('drag');
+  if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = Math.hypot(a.x - b.x, a.y - b.y); }
+});
+vp.addEventListener('pointermove', e => {
+  const p = ptrs.get(e.pointerId); if (!p) return;
+  if (ptrs.size === 2) {
+    p.x = e.clientX; p.y = e.clientY;
+    const [a, b] = [...ptrs.values()], d = Math.hypot(a.x - b.x, a.y - b.y), r = vp.getBoundingClientRect();
+    if (pinch) zoomAt(Z * d / pinch, (a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top);
+    pinch = d;
+  } else { X += e.clientX - p.x; Y += e.clientY - p.y; p.x = e.clientX; p.y = e.clientY; view(); }
+});
+const endPtr = e => { ptrs.delete(e.pointerId); pinch = 0; if (!ptrs.size) vp.classList.remove('drag'); };
+vp.addEventListener('pointerup', endPtr); vp.addEventListener('pointercancel', endPtr);
+addEventListener('resize', view);
 
-/* ════════════ PARTÍCULAS EXTRA REACTIVAS AL MOUSE ════════════ */
-(function () {
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+/* ═══════ VISOR ═══════ */
+let frames = [], currentFrame = 0, playing = false, blinkTimer = null;
 
-  const STARS = 450;   // estrellas adicionales (súbelo o bájalo a gusto)
-  const TRAIL = 3;     // chispas emitidas por movimiento del mouse (0 = desactivar)
-  const RADIUS = 140;  // radio de influencia del mouse
+function applyFilters() {
+  const c = parseInt($('contrastSlider').value) || 100;
+  $('contrastLbl').textContent = c + '%';
+  img.style.filter = ($('invertCheck').checked ? 'invert(1) ' : '') + `contrast(${c}%)`;
+  const zs = $('zoomSlider');
+  if (zs.value !== lastSlider) zoomAt(parseFloat(zs.value) || 1, vp.clientWidth / 2, vp.clientHeight / 2);
+}
+function showFrame(idx) {
+  if (!frames.length) return;
+  idx = Math.max(0, Math.min(idx, frames.length - 1)); currentFrame = idx;
+  const f = frames[idx];
+  img.src = ($('diffCheck').checked && f.diff_url) ? f.diff_url : f.url;   // diferencia real calculada en el backend
+  img.style.display = ''; $('viewerIdle').style.display = 'none';
+  applyFilters();
+  $('timeline').value = idx;
+  $('timelineLabel').textContent = `${idx + 1} / ${frames.length}`;
+  const wl = f.wl_um ? `${f.wl_um[0]}–${f.wl_um[1]} µm` : null;
+  const t = f.date || (typeof f.time === 'number' ? f.time.toFixed(1) : f.time);
+  $('epochDisplay').textContent = [t, f.band, wl].filter(Boolean).join(' · ');
+}
+function toggleDifference() {
+  vp.style.outline = $('diffCheck').checked ? '2px solid rgba(252,61,33,.5)' : 'none';
+  showFrame(currentFrame);
+}
+function scheduleNext() {
+  if (!playing) return;
+  const delay = Math.round(1200 / (parseInt($('speedSlider').value) || 5));
+  blinkTimer = setTimeout(() => { if (!playing) return; showFrame((currentFrame + 1) % frames.length); scheduleNext(); }, delay);
+}
+function updatePlayIcon() {
+  $('playIcon').innerHTML = playing ? '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>' : '<polygon points="5 3 19 12 5 21"/>';
+}
+function startPlay() { if (frames.length < 2) return; playing = true; updatePlayIcon(); scheduleNext(); }
+function stopPlay() { playing = false; clearTimeout(blinkTimer); updatePlayIcon(); }
+function togglePlay() { if (!frames.length) return; playing ? stopPlay() : startPlay(); }
+function onTimelineChange(val) { stopPlay(); showFrame(parseInt(val)); }
 
-  const c = document.getElementById('starCanvas2'), x = c.getContext('2d');
+function showLoading(on) {
+  $('loadingOverlay').classList.toggle('visible', on);
+  $('loadBtn').disabled = on;
+  $('loadSpin').style.display = on ? 'block' : 'none';
+}
+const preload = src => new Promise(r => { const i = new Image(); i.onload = i.onerror = r; i.src = src; });
+
+async function loadTarget() {
+  const ra = parseFloat($('ra').value), dec = parseFloat($('dec').value), fov = $('fovSlider').value;
+  if (isNaN(ra) || isNaN(dec) || ra < 0 || ra > 360 || dec < -90 || dec > 90) { setStatus('error', 'invalid'); return; }
+  stopPlay(); frames = []; resetView();
+  setStatus('loading', 'loading'); showLoading(true);
+  $('viewerIdle').style.display = 'none';
+  try {
+    const res = await fetch(`/api/target?ra=${ra}&dec=${dec}&fov=${fov}`);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.frames || !data.frames.length) throw new Error(data.error || `HTTP ${res.status}`);
+    await Promise.all(data.frames.flatMap(f => [f.url, f.diff_url]).filter(Boolean).map(preload));  // sin parpadeos de descarga
+    frames = data.frames; currentFrame = 0;
+    $('timeline').max = frames.length - 1; $('timeline').value = 0;
+    $('frameInfo').textContent = frames.length;
+    const src = { cache: 'Local Cache', nasa_live_processed: 'NASA/IRSA Live' }[data.source] || data.source;
+    $('sourceInfo').textContent = src; $('sourceDisplay').textContent = src;
+    history.replaceState(null, '', `?ra=${ra}&dec=${dec}&fov=${fov}`);   // enlace compartible
+    showFrame(0); $('playBtn').disabled = false;
+    setStatus('ready', 'ready'); startPlay();
+  } catch (err) {
+    setStatus('error', err.message || 'error');
+    $('status').title = err.message || '';
+    $('viewerIdle').style.display = 'flex';
+    $('viewerIdle').querySelector('span').textContent = err.message || 'Error';   // muestra el error completo en el visor
+    console.error('loadTarget error:', err);
+  } finally { showLoading(false); }
+}
+function setPreset(ra, dec) {
+  $('ra').value = ra; $('dec').value = dec;
+  switchTab('viewer');
+  setTimeout(loadTarget, 80);
+}
+['contrastSlider', 'zoomSlider'].forEach(id => $(id).addEventListener('input', applyFilters));
+$('speedSlider').addEventListener('input', () => { if (playing) { clearTimeout(blinkTimer); scheduleNext(); } });
+$('timeline').addEventListener('input', e => onTimelineChange(e.target.value));
+
+/* ═══════ FONDO ESTELAR (muchas partículas + chispas del mouse) ═══════ */
+(() => {
+  const c = $('starCanvas'), x = c.getContext('2d');
+  const STARS = 450, LINK = 55, RADIUS = 130, TRAIL = 3;   // ajusta a gusto (TRAIL = 0 desactiva las chispas)
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let W, H, S = [], P = [], m = { x: -9999, y: -9999 }, lx = null, ly = 0;
-
   function init() {
     W = c.width = innerWidth; H = c.height = innerHeight;
     S = Array.from({ length: STARS }, () => ({
-      x: Math.random() * W, y: Math.random() * H,
-      vx: (Math.random() - 0.5) * 0.2, vy: (Math.random() - 0.5) * 0.2,
-      r: Math.random() * 1.1 + 0.3, a: Math.random() * 0.45 + 0.2,
-      p: Math.random() * 6.28, ps: 0.008 + Math.random() * 0.012
-    }));
+      x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - .5) * .18, vy: (Math.random() - .5) * .18,
+      r: Math.random() * 1.3 + .3, a: Math.random() * .45 + .2, p: Math.random() * 6.28, ps: .008 + Math.random() * .012 }));
   }
-
   function draw() {
     x.clearRect(0, 0, W, H);
-
     for (const s of S) {
       s.p += s.ps;
       const dx = s.x - m.x, dy = s.y - m.y, d = Math.hypot(dx, dy);
-      if (d < RADIUS && d > 0) {
-        const f = (RADIUS - d) / RADIUS * 0.5;
-        s.vx += dx / d * f - dy / d * f * 0.15;   // empuje + ligero remolino orgánico
-        s.vy += dy / d * f + dx / d * f * 0.15;
-      }
-      s.vx *= 0.985; s.vy *= 0.985;
-      s.x += s.vx; s.y += s.vy;
-      if (s.x < -10) s.x = W + 10; if (s.x > W + 10) s.x = -10;
-      if (s.y < -10) s.y = H + 10; if (s.y > H + 10) s.y = -10;
+      if (d < RADIUS && d > 0) { const f = (RADIUS - d) / RADIUS * .45; s.vx += dx / d * f - dy / d * f * .15; s.vy += dy / d * f + dx / d * f * .15; }
+      s.vx *= .985; s.vy *= .985; s.x += s.vx; s.y += s.vy;
+      if (s.x < -10) s.x = W + 10; if (s.x > W + 10) s.x = -10; if (s.y < -10) s.y = H + 10; if (s.y > H + 10) s.y = -10;
       x.beginPath(); x.arc(s.x, s.y, s.r, 0, 6.283);
-      x.fillStyle = `rgba(26,86,219,${s.a * (0.7 + 0.3 * Math.sin(s.p))})`; x.fill();
+      x.fillStyle = `rgba(26,86,219,${s.a * (.7 + .3 * Math.sin(s.p))})`; x.fill();
     }
-
-    // Chispas que deja el mouse al moverse
+    x.lineWidth = .6;
+    for (let i = 0; i < S.length; i++) for (let j = i + 1; j < S.length; j++) {
+      const dx = S[i].x - S[j].x; if (dx > LINK || dx < -LINK) continue;
+      const dy = S[i].y - S[j].y, d = Math.hypot(dx, dy);
+      if (d < LINK) { x.beginPath(); x.moveTo(S[i].x, S[i].y); x.lineTo(S[j].x, S[j].y); x.strokeStyle = `rgba(26,86,219,${(1 - d / LINK) * .12})`; x.stroke(); }
+    }
     for (let i = P.length - 1; i >= 0; i--) {
-      const q = P[i];
-      q.x += q.vx; q.y += q.vy; q.vx *= 0.96; q.vy *= 0.96; q.l -= 0.018;
+      const q = P[i]; q.x += q.vx; q.y += q.vy; q.vx *= .96; q.vy *= .96; q.l -= .018;
       if (q.l <= 0) { P.splice(i, 1); continue; }
-      x.beginPath(); x.arc(q.x, q.y, q.r * (0.5 + q.l * 0.5), 0, 6.283);
-      x.fillStyle = `rgba(26,86,219,${q.l * 0.7})`; x.fill();
+      x.beginPath(); x.arc(q.x, q.y, q.r * (.5 + q.l * .5), 0, 6.283); x.fillStyle = `rgba(26,86,219,${q.l * .7})`; x.fill();
     }
-    requestAnimationFrame(draw);
+    if (!reduce) requestAnimationFrame(draw);
   }
-
   addEventListener('mousemove', e => {
     m.x = e.clientX; m.y = e.clientY;
-    if (lx !== null && TRAIL) {
+    if (!reduce && lx !== null && TRAIL) {
       const mx = m.x - lx, my = m.y - ly, n = Math.min(TRAIL * 2, TRAIL + (Math.hypot(mx, my) / 14 | 0));
       for (let i = 0; i < n && P.length < 700; i++) {
-        const a = Math.random() * 6.283, v = 0.3 + Math.random() * 1.2;
-        P.push({ x: m.x, y: m.y, vx: Math.cos(a) * v + mx * 0.12, vy: Math.sin(a) * v + my * 0.12, r: Math.random() * 1.4 + 0.5, l: 1 });
+        const a = Math.random() * 6.283, v = .3 + Math.random() * 1.2;
+        P.push({ x: m.x, y: m.y, vx: Math.cos(a) * v + mx * .12, vy: Math.sin(a) * v + my * .12, r: Math.random() * 1.4 + .5, l: 1 });
       }
     }
     lx = m.x; ly = m.y;
@@ -1277,341 +546,16 @@
   addEventListener('resize', init);
   init(); draw();
 })();
-</script>
 
-<!-- ══════════════════════════════════════════════
-     JAVASCRIPT
-══════════════════════════════════════════════ -->
-<script>
-/* ════════════════════════════════════
-   STAR CANVAS
-════════════════════════════════════ */
-(function() {
-  const canvas = document.getElementById('starCanvas');
-  const ctx = canvas.getContext('2d');
-  let W, H, mouse = { x: -9999, y: -9999 }, stars = [], animId;
-
-  const STAR_COUNT = 130;
-  const CONNECT_DIST = 110;
-  const MOUSE_REPEL = 90;
-
-  function resize() {
-    W = canvas.width = window.innerWidth;
-    H = canvas.height = window.innerHeight;
-  }
-
-  function mkStar() {
-    return {
-      x: Math.random() * W,
-      y: Math.random() * H,
-      vx: (Math.random() - 0.5) * 0.18,
-      vy: (Math.random() - 0.5) * 0.18,
-      r: Math.random() * 1.4 + 0.3,
-      alpha: Math.random() * 0.5 + 0.2,
-      pulse: Math.random() * Math.PI * 2,
-      pulseSpeed: 0.008 + Math.random() * 0.012,
-    };
-  }
-
-  function init() {
-    resize();
-    stars = Array.from({ length: STAR_COUNT }, mkStar);
-  }
-
-  function draw() {
-    ctx.clearRect(0, 0, W, H);
-
-    stars.forEach(s => {
-      // Pulse
-      s.pulse += s.pulseSpeed;
-      const a = s.alpha * (0.7 + 0.3 * Math.sin(s.pulse));
-
-      // Mouse repel
-      const dx = s.x - mouse.x, dy = s.y - mouse.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < MOUSE_REPEL && dist > 0) {
-        const force = (MOUSE_REPEL - dist) / MOUSE_REPEL * 0.4;
-        s.vx += (dx / dist) * force;
-        s.vy += (dy / dist) * force;
-      }
-
-      // Damping
-      s.vx *= 0.985;
-      s.vy *= 0.985;
-
-      s.x += s.vx;
-      s.y += s.vy;
-
-      // Wrap
-      if (s.x < -10) s.x = W + 10;
-      if (s.x > W + 10) s.x = -10;
-      if (s.y < -10) s.y = H + 10;
-      if (s.y > H + 10) s.y = -10;
-
-      // Draw star dot
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(26, 86, 219, ${a})`;
-      ctx.fill();
-    });
-
-    // Draw connections
-    for (let i = 0; i < stars.length; i++) {
-      for (let j = i + 1; j < stars.length; j++) {
-        const dx = stars[i].x - stars[j].x;
-        const dy = stars[i].y - stars[j].y;
-        const d = Math.sqrt(dx * dx + dy * dy);
-        if (d < CONNECT_DIST) {
-          const opacity = (1 - d / CONNECT_DIST) * 0.12;
-          ctx.beginPath();
-          ctx.moveTo(stars[i].x, stars[i].y);
-          ctx.lineTo(stars[j].x, stars[j].y);
-          ctx.strokeStyle = `rgba(26, 86, 219, ${opacity})`;
-          ctx.lineWidth = 0.6;
-          ctx.stroke();
-        }
-      }
-    }
-
-    animId = requestAnimationFrame(draw);
-  }
-
-  window.addEventListener('resize', () => { resize(); });
-  window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
-  window.addEventListener('mouseleave', () => { mouse.x = -9999; mouse.y = -9999; });
-
-  init();
-  draw();
-})();
-
-
-/* ════════════════════════════════════
-   LANGUAGE SYSTEM
-════════════════════════════════════ */
-let currentLang = 'en';
-
-function setLang(lang) {
-  currentLang = lang;
-  document.documentElement.lang = lang;
-
-  // Toggle active class on buttons
-  document.getElementById('lang-en').classList.toggle('active', lang === 'en');
-  document.getElementById('lang-es').classList.toggle('active', lang === 'es');
-
-  // Update all [data-en] / [data-es] elements
-  document.querySelectorAll('[data-en]').forEach(el => {
-    const txt = el.getAttribute('data-' + lang);
-    if (txt) el.textContent = txt;
-  });
-
-  // Update placeholders
-  document.getElementById('ra').placeholder = lang === 'es' ? 'ej. 133.796' : 'e.g. 133.796';
-  document.getElementById('dec').placeholder = lang === 'es' ? 'ej. -7.245' : 'e.g. -7.245';
-}
-
-// Init language on load
-document.addEventListener('DOMContentLoaded', () => { setLang('en'); });
-
-
-/* ════════════════════════════════════
-   TAB SYSTEM
-════════════════════════════════════ */
-function switchTab(tab) {
-  ['welcome', 'viewer'].forEach(t => {
-    document.getElementById('panel-' + t).classList.toggle('active', t === tab);
-    document.getElementById('tab-' + t).classList.toggle('active', t === tab);
-  });
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-
-/* ════════════════════════════════════
-   BLINK VIEWER ENGINE
-════════════════════════════════════ */
-let frames = [];
-let currentFrame = 0;
-let playing = false;
-let blinkInterval = null;
-let differenceMode = false;
-
-function setStatus(state, text) {
-  const el = document.getElementById('status');
-  el.className = 'status-badge ' + state;
-  el.innerHTML = `<span class="status-dot"></span><span>${text}</span>`;
-  document.getElementById('statusInline').textContent = text;
-}
-
-function setActiveTarget(el) {
-  document.querySelectorAll('.target-card').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
-}
-
-function showLoading(show) {
-  const overlay = document.getElementById('loadingOverlay');
-  overlay.classList.toggle('visible', show);
-  const btn = document.getElementById('loadBtn');
-  if (show) {
-    btn.disabled = true;
-    btn.innerHTML = `<div class="spinner"></div><span data-en="Loading…" data-es="Cargando…">${currentLang === 'es' ? 'Cargando…' : 'Loading…'}</span>`;
-  } else {
-    btn.disabled = false;
-    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span>${currentLang === 'es' ? 'Cargar Región Celeste' : 'Load Sky Region'}</span>`;
-  }
-}
-
-async function loadTarget() {
-  const ra = parseFloat(document.getElementById('ra').value);
-  const dec = parseFloat(document.getElementById('dec').value);
-
-  if (isNaN(ra) || isNaN(dec)) {
-    setStatus('error', currentLang === 'es' ? 'Coordenadas inválidas' : 'Invalid coordinates');
-    return;
-  }
-
-  // Stop any current playback
-  stopPlay();
-  frames = [];
-
-  setStatus('loading', currentLang === 'es' ? 'Consultando NASA/IRSA…' : 'Querying NASA/IRSA…');
-  showLoading(true);
-  document.getElementById('viewerIdle').style.display = 'none';
-
-  try {
-    const res = await fetch(`/api/target?ra=${ra}&dec=${dec}`);
-    const data = await res.json();
-
-    if (!res.ok || !data.frames || data.frames.length === 0) {
-      throw new Error(data.error || 'No frames returned');
-    }
-
-    frames = data.frames;
-    currentFrame = 0;
-
-    // Update timeline
-    const tl = document.getElementById('timeline');
-    tl.max = frames.length - 1;
-    tl.value = 0;
-    document.getElementById('timelineLabel').textContent = `1 / ${frames.length}`;
-
-    // Update info
-    document.getElementById('frameInfo').textContent = frames.length;
-    const srcMap = { cache: 'Local Cache', nasa_live_processed: 'NASA/IRSA Live' };
-    const srcLabel = srcMap[data.source] || data.source;
-    document.getElementById('sourceInfo').textContent = srcLabel;
-    document.getElementById('sourceDisplay').textContent = srcLabel;
-
-    // Show first frame
-    showFrame(0);
-    document.getElementById('playBtn').disabled = false;
-
-    setStatus('ready', currentLang === 'es' ? 'Listo' : 'Ready');
-    startPlay();
-
-  } catch (err) {
-    setStatus('error', currentLang === 'es' ? 'Error de carga' : 'Load Error');
-    document.getElementById('viewerIdle').style.display = 'flex';
-    console.error('loadTarget error:', err);
-  } finally {
-    showLoading(false);
-  }
-}
-
-function showFrame(idx) {
-  if (frames.length === 0) return;
-  idx = Math.max(0, Math.min(idx, frames.length - 1));
-  currentFrame = idx;
-
-  const img = document.getElementById('blinkImg');
-  img.src = frames[idx].url;
-  img.style.display = 'block';
-  img.style.display = '';
-  document.getElementById('viewerIdle').style.display = 'none';
-
-  applyFilters();
-
-  document.getElementById('timeline').value = idx;
-  document.getElementById('timelineLabel').textContent = `${idx + 1} / ${frames.length}`;
-
-  const epoch = frames[idx].time;
-  document.getElementById('epochDisplay').textContent = typeof epoch === 'number' ? epoch.toFixed(1) : epoch;
-}
-
-function applyFilters() {
-  const img = document.getElementById('blinkImg');
-  const zoom = parseFloat(document.getElementById('zoomSlider').value) || 1;
-  const contrast = parseInt(document.getElementById('contrastSlider').value) || 100;
-  const invert = document.getElementById('invertCheck').checked;
-  const filters = [];
-  if (invert) filters.push('invert(1)');
-  filters.push(`contrast(${contrast}%)`);
-  img.style.filter = filters.join(' ');
-  img.style.transform = `scale(${zoom})`;
-  img.style.transformOrigin = 'center center';
-}
-
-function toggleDifference() {
-  differenceMode = document.getElementById('diffCheck').checked;
-  // Visual cue
-  const wrapper = document.querySelector('.viewer-wrapper');
-  if (differenceMode) {
-    wrapper.style.outline = '2px solid rgba(252,61,33,0.5)';
-  } else {
-    wrapper.style.outline = 'none';
-  }
-}
-
-function startPlay() {
-  if (frames.length === 0) return;
-  playing = true;
-  updatePlayIcon();
-  scheduleNext();
-}
-
-function stopPlay() {
-  playing = false;
-  if (blinkInterval) { clearTimeout(blinkInterval); blinkInterval = null; }
-  updatePlayIcon();
-}
-
-function scheduleNext() {
-  if (!playing) return;
-  const speed = parseInt(document.getElementById('speedSlider').value) || 5;
-  const delay = Math.round(1200 / speed);
-  blinkInterval = setTimeout(() => {
-    if (!playing) return;
-    currentFrame = (currentFrame + 1) % frames.length;
-    showFrame(currentFrame);
-    scheduleNext();
-  }, delay);
-}
-
-function togglePlay() {
-  if (frames.length === 0) return;
-  if (playing) { stopPlay(); } else { startPlay(); }
-}
-
-function updatePlayIcon() {
-  const icon = document.getElementById('playIcon');
-  if (playing) {
-    icon.innerHTML = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
-  } else {
-    icon.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"/>';
-  }
-}
-
-function onTimelineChange(val) {
-  stopPlay();
-  showFrame(parseInt(val));
-}
-
-function setPreset(ra, dec) {
-  document.getElementById('ra').value = ra;
-  document.getElementById('dec').value = dec;
-  switchTab('viewer');
-  // Small delay to allow DOM to settle then auto-load
-  setTimeout(loadTarget, 80);
+/* ═══════ INICIO ═══════ */
+setLang('en');
+view();
+const q = new URLSearchParams(location.search);          // ?ra=133.795&dec=-7.245&fov=10
+if (q.has('ra') && q.has('dec')) {
+  $('ra').value = q.get('ra'); $('dec').value = q.get('dec');
+  if (q.has('fov')) { $('fovSlider').value = q.get('fov'); $('fovLbl').textContent = $('fovSlider').value + '′'; }
+  switchTab('viewer'); loadTarget();
 }
 </script>
-
 </body>
 </html>
