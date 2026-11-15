@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 import astropy.units as u
 from astropy.coordinates import SkyCoord
 from astropy.io import fits
-from astropy.visualization import ImageNormalize, PercentileInterval, SqrtStretch
+from astropy.visualization import ImageNormalize, PercentileInterval, AsinhStretch
 from astroquery.ipac.irsa import Irsa
 
 import matplotlib
@@ -46,7 +46,7 @@ def get_target_time_series(ra: float = Query(...), dec: float = Query(...)):
     try:
         os.makedirs(target_dir, exist_ok=True)
         coord = SkyCoord(ra=ra * u.degree, dec=dec * u.degree, frame="icrs")
-        search_radius = 0.05 * u.deg
+        search_radius = 0.15 * u.deg
         
         table = None
         for attempt in range(3):
@@ -76,7 +76,7 @@ def get_target_time_series(ra: float = Query(...), dec: float = Query(...)):
                     image_data = hdulist["IMAGE"].data
                     image_data = np.nan_to_num(image_data, nan=0.0)
                     
-                    norm = ImageNormalize(image_data, interval=PercentileInterval(98), stretch=SqrtStretch())
+                    norm = ImageNormalize(image_data, interval=PercentileInterval(99), stretch=AsinhStretch())
                     scaled = norm(image_data)
                     
                     filename = f"frame_{idx:02d}.png"
