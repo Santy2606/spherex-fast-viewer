@@ -3,180 +3,280 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SPHEREx Blink Explorer - NASA Space Apps</title>
+    <title>SPHEREx Blink Explorer - WiseView Style</title>
     <style>
-        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #07090e; color: #f8fafc; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        header { text-align: center; margin-bottom: 20px; }
-        h1 { color: #38bdf8; margin: 0 0 5px 0; font-size: 24px; }
-        p { color: #94a3b8; margin: 0; font-size: 14px; }
+        body { font-family: 'Inter', system-ui, sans-serif; background: #0b0f19; color: #f8fafc; margin: 0; padding: 15px; display: flex; justify-content: center; }
+        .main-container { display: flex; gap: 20px; max-width: 1250px; width: 100%; flex-wrap: wrap; justify-content: center; }
         
-        .panel { background: #111827; border: 1px solid #1f2937; padding: 15px; border-radius: 12px; width: 100%; max-width: 500px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); margin-bottom: 15px; }
-        .input-group { display: flex; gap: 10px; margin-bottom: 10px; }
-        .input-group label { flex: 1; font-size: 13px; color: #cbd5e1; display: flex; flex-direction: column; }
-        .input-group input { background: #030712; border: 1px solid #374151; color: #fff; padding: 8px; border-radius: 6px; margin-top: 4px; text-align: center; font-size: 14px; }
+        /* Panel de Control Izquierdo (WiseView) */
+        .control-panel { background: #111827; border: 1px solid #1f2937; padding: 15px; border-radius: 10px; width: 280px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); font-size: 13px; }
+        .control-panel h3 { margin-top: 0; color: #38bdf8; font-size: 15px; border-bottom: 1px solid #374151; padding-bottom: 6px; }
+        .control-group { margin-bottom: 12px; }
+        .control-group label { display: flex; justify-content: space-between; margin-bottom: 4px; color: #cbd5e1; }
+        .control-group input[type="range"] { width: 100%; accent-color: #38bdf8; }
         
-        button.primary { background: #38bdf8; color: #030712; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; transition: background 0.2s; }
-        button.primary:hover { background: #7dd3fc; }
-        
-        .presets { display: flex; gap: 5px; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
-        .preset-btn { background: #1f2937; color: #e2e8f0; border: 1px solid #374151; padding: 5px 10px; border-radius: 5px; font-size: 12px; cursor: pointer; }
-        .preset-btn:hover { background: #374151; }
+        .checkbox-group { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; border-top: 1px solid #374151; padding-top: 10px; }
+        .checkbox-group label { display: flex; align-items: center; gap: 8px; color: #e2e8f0; cursor: pointer; }
+        .checkbox-group input { accent-color: #38bdf8; width: 16px; height: 16px; }
 
-        .viewer { background: #030712; border-radius: 8px; padding: 10px; text-align: center; position: relative; border: 1px solid #1f2937; }
-        .image-container { width: 100%; height: 400px; display: flex; justify-content: center; align-items: center; overflow: hidden; background: #000; border-radius: 6px; }
-        .image-container img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        /* Visor Central */
+        .viewer-container { flex: 1; min-width: 350px; max-width: 600px; background: #111827; border: 1px solid #1f2937; border-radius: 10px; padding: 15px; display: flex; flex-direction: column; align-items: center; }
+        .input-coords { display: flex; gap: 8px; width: 100%; margin-bottom: 12px; }
+        .input-coords input { background: #030712; border: 1px solid #374151; color: #fff; padding: 6px; border-radius: 6px; width: 100%; text-align: center; }
         
-        .controls { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
-        button.play { background: #22c55e; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        button.primary { background: #38bdf8; color: #030712; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; margin-bottom: 10px; }
+        button.primary:hover { background: #7dd3fc; }
+
+        /* Panel Derecho (Objetivos Presets con Nombres) */
+        .targets-panel { background: #111827; border: 1px solid #1f2937; padding: 15px; border-radius: 10px; width: 280px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); font-size: 13px; }
+        .targets-panel h3 { margin-top: 0; color: #38bdf8; font-size: 15px; border-bottom: 1px solid #374151; padding-bottom: 6px; }
+        .target-btn { background: #1f2937; color: #e2e8f0; border: 1px solid #374151; padding: 8px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; width: 100%; text-align: left; margin-bottom: 6px; transition: background 0.2s; display: flex; flex-direction: column; }
+        .target-btn:hover { background: #374151; border-color: #38bdf8; }
+        .target-btn span { font-size: 10px; color: #94a3b8; }
+
+        /* Lienzo de la Imagen */
+        .image-box { width: 100%; height: 380px; background: #000; border-radius: 6px; display: flex; justify-content: center; align-items: center; overflow: hidden; position: relative; border: 1px solid #374151; }
+        .image-box img { max-width: 100%; max-height: 100%; transition: transform 0.1s ease; transform-origin: center; }
+
+        .player-controls { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 12px; }
+        button.play { background: #22c55e; color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; }
         button.play:hover { background: #16a34a; }
-        
         .timeline { flex: 1; accent-color: #38bdf8; }
-        .speed-box { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 13px; color: #94a3b8; }
-        .speed-box input { accent-color: #38bdf8; width: 120px; }
-        
-        #status { font-size: 13px; color: #f59e0b; margin-top: 8px; text-align: center; }
+
+        #status { font-size: 12px; color: #f59e0b; margin-bottom: 8px; text-align: center; min-height: 18px; }
+        .footer-note { font-size: 10px; color: #64748b; margin-top: 15px; text-align: center; border-top: 1px solid #1f2937; padding-top: 8px; }
     </style>
 </head>
 <body>
 
-    <header>
-        <h1>SPHEREx Time-Series Explorer</h1>
-        <p>Efecto Blink interactivo para detección de objetos en movimiento (NASA Space Apps)</p>
-    </header>
-
-    <div class="panel">
-        <div class="input-group">
-            <label>Ascensión Recta (RA)
-                <input type="number" id="ra" step="0.001" value="133.795">
-            </label>
-            <label>Declinación (Dec)
-                <input type="number" id="dec" step="0.001" value="-7.245">
-            </label>
-        </div>
-        <button class="primary" onclick="loadTarget()">Cargar y Animar Región del Cielo</button>
+<div class="main-container">
+    
+    <!-- PANEL IZQUIERDO: CONTROLES WISEVIEW -->
+    <div class="control-panel">
+        <h3>WiseView Controls</h3>
         
-        <div class="presets">
-            <span style="font-size:12px; color:#64748b; width:100%; text-align:center; margin-bottom:2px;">Objetivos del Reto:</span>
-            <button class="preset-btn" onclick="setPreset(133.795, -7.245)">WISE 0855</button>
-            <button class="preset-btn" onclick="setPreset(210.802, 54.348)">Galaxia M101</button>
-            <button class="preset-btn" onclick="setPreset(304.693, 42.443)">Objeto 1 (D2)</button>
+        <div class="control-group">
+            <label>Blink interval (<span id="speedLbl">400</span> ms)</label>
+            <input type="range" id="speedSlider" min="50" max="1000" step="50" value="400" oninput="changeSpeed(this.value)">
+        </div>
+
+        <div class="control-group">
+            <label>Zoom (<span id="zoomLbl">1.0</span>x)</label>
+            <input type="range" id="zoomSlider" min="1.0" max="4.0" step="0.1" value="1.0" oninput="changeZoom(this.value)">
+        </div>
+
+        <div class="control-group">
+            <label>Contraste (<span id="contrastLbl">100</span>%)</label>
+            <input type="range" id="contrastSlider" min="50" max="300" step="10" value="100" oninput="changeContrast(this.value)">
+        </div>
+
+        <div class="checkbox-group">
+            <label><input type="checkbox" id="invertCheck" onchange="applyFilters()"> Invert pixel values (Negativo)</label>
+            <label><input type="checkbox" id="diffCheck" onchange="toggleDifference()"> Difference imaging</label>
+            <label><input type="checkbox" checked disabled> Skip duplicate windows</label>
+            <label><input type="checkbox" disabled> Gaia DR3 overlay</label>
+        </div>
+
+        <div class="footer-note">
+            Adaptado para SPHEREx Viewer<br>Inspirado en AMNH[cite: 9]
         </div>
     </div>
 
-    <div class="panel viewer">
-        <div id="status">Listo. Introduce coordenadas o selecciona un preset.</div>
-        <div class="image-container">
-            <img id="blinkImg" alt="Esperando imágenes...">
+    <!-- CENTRO: VISOR PRINCIPAL -->
+    <div class="viewer-container">
+        <div class="input-coords">
+            <input type="number" id="ra" step="0.001" value="133.795" placeholder="RA">
+            <input type="number" id="dec" step="0.001" value="-7.245" placeholder="Dec">
         </div>
-        
-        <div class="controls">
+        <button class="primary" onclick="loadTarget()">Cargar Región del Cielo</button>
+
+        <div id="status">Listo. Selecciona un objetivo del panel derecho.</div>
+
+        <div class="image-box">
+            <img id="blinkImg" alt="Visor SPHEREx">
+        </div>
+
+        <div class="player-controls">
             <button class="play" id="playBtn" onclick="togglePlay()">Play</button>
             <input type="range" id="timeline" class="timeline" min="0" value="0" oninput="onTimelineChange(this.value)">
         </div>
-        
-        <div class="speed-box">
+
+        <div style="display:flex; justify-content:space-between; width:100%; margin-top:8px; font-size:12px; color:#94a3b8;">
             <span id="frameInfo">Época: -- / --</span>
-            <label>Velocidad: <span id="speedVal">400</span>ms <input type="range" id="speedSlider" min="50" max="1000" step="50" value="400" oninput="onSpeedChange(this.value)"></label>
+            <span id="sourceInfo">Fuente: --</span>
         </div>
     </div>
 
-    <script>
-        let frames = [];
-        let currentIndex = 0;
-        let isPlaying = false;
-        let timer = null;
-        let intervalMs = 400;
-        let preloadedImages = [];
+    <!-- PANEL DERECHO: OBJETIVOS PREDEFINIDOS CON NOMBRES -->
+    <div class="targets-panel">
+        <h3>Objetivos Científicos</h3>
+        
+        <button class="target-btn" onclick="setPreset(133.795, -7.245)">
+            WISE 0855
+            <span>RA: 133.795 | Dec: -7.245</span>
+        </button>
 
-        function setPreset(ra, dec) {
-            document.getElementById('ra').value = ra;
-            document.getElementById('dec').value = dec;
-            loadTarget();
-        }
+        <button class="target-btn" onclick="setPreset(210.802, 54.348)">
+            Galaxia M101
+            <span>RA: 210.802 | Dec: 54.348</span>
+        </button>
 
-        async function loadTarget() {
-            let ra = document.getElementById('ra').value;
-            let dec = document.getElementById('dec').value;
-            let status = document.getElementById('status');
+        <button class="target-btn" onclick="setPreset(304.693, 42.443)">
+            Objeto 1 (D2)
+            <span>RA: 304.693 | Dec: 42.443</span>
+        </button>
+
+        <button class="target-btn" onclick="setPreset(269.452, 4.693)">
+            Estrella de Barnard
+            <span>RA: 269.452 | Dec: 4.693</span>
+        </button>
+
+        <button class="target-btn" onclick="setPreset(330.840, -56.786)">
+            Epsilon Indi B
+            <span>RA: 330.840 | Dec: -56.786</span>
+        </button>
+
+        <button class="target-btn" onclick="setPreset(76.956, 30.401)">
+            RW Aurigae (Variable)
+            <span>RA: 76.956 | Dec: 30.401</span>
+        </button>
+
+        <button class="target-btn" onclick="setPreset(248.167, 66.755)">
+            R Draconis (Variable Mira)
+            <span>RA: 248.167 | Dec: 66.755</span>
+        </button>
+    </div>
+
+</div>
+
+<script>
+    let frames = [];
+    let currentIndex = 0;
+    let isPlaying = false;
+    let timer = null;
+    let intervalMs = 400;
+    let preloadedImages = [];
+    let currentZoom = 1.0;
+    let currentContrast = 100;
+
+    function setPreset(ra, dec) {
+        document.getElementById('ra').value = ra;
+        document.getElementById('dec').value = dec;
+        loadTarget();
+    }
+
+    async function loadTarget() {
+        let ra = document.getElementById('ra').value;
+        let dec = document.getElementById('dec').value;
+        let status = document.getElementById('status');
+        
+        if(isPlaying) togglePlay();
+        status.innerText = "⚡ Cargando fotogramas de la región...";
+
+        try {
+            let res = await fetch(`/api/target?ra=${ra}&dec=${dec}`);
+            let data = await res.json();
             
-            status.innerText = "Consultando datos (si no está en caché, esto tardará unos segundos la primera vez)...";
-            if(isPlaying) togglePlay();
-
-            try {
-                let res = await fetch(`/api/target?ra=${ra}&dec=${dec}`);
-                let data = await res.json();
+            if(data.status === "success") {
+                frames = data.frames;
+                status.innerText = `✅ ¡Cargado con éxito! (${frames.length} épocas)`;
+                document.getElementById('sourceInfo').innerText = `Fuente: ${data.source}`;
                 
-                if(data.status === "success") {
-                    frames = data.frames;
-                    status.innerText = `Cargado con éxito (${data.source === 'cache' ? 'Desde Caché Local ⚡' : 'Descargado de NASA 🛰️'})`;
-                    
-                    // Pre-cargar imágenes en memoria del navegador para velocidad instantánea
-                    preloadedImages = frames.map(f => {
-                        let img = new Image();
-                        img.src = f.url;
-                        return img;
-                    });
+                preloadedImages = frames.map(f => {
+                    let img = new Image();
+                    img.src = f.url;
+                    return img;
+                });
 
-                    let timeline = document.getElementById('timeline');
-                    timeline.max = frames.length - 1;
-                    timeline.value = 0;
-                    currentIndex = 0;
-                    showFrame(0);
-                } else {
-                    status.innerText = "Error: " + (data.error || "No se obtuvieron datos.");
-                }
-            } catch (err) {
-                status.innerText = "Error de conexión con el servidor.";
-            }
-        }
-
-        function showFrame(index) {
-            if(frames.length === 0) return;
-            currentIndex = index;
-            document.getElementById('blinkImg').src = preloadedImages[currentIndex].src;
-            document.getElementById('timeline').value = currentIndex;
-            document.getElementById('frameInfo').innerText = `Época: ${currentIndex + 1} / ${frames.length} (MJD: ${frames[currentIndex].time.toFixed(1)})`;
-        }
-
-        function onTimelineChange(val) {
-            if(isPlaying) togglePlay();
-            showFrame(parseInt(val));
-        }
-
-        function onSpeedChange(val) {
-            intervalMs = parseInt(val);
-            document.getElementById('speedVal').innerText = intervalMs;
-            if(isPlaying) {
-                clearInterval(timer);
-                startTimer();
-            }
-        }
-
-        function startTimer() {
-            timer = setInterval(() => {
-                currentIndex = (currentIndex + 1) % frames.length;
-                showFrame(currentIndex);
-            }, intervalMs);
-        }
-
-        function togglePlay() {
-            if(frames.length === 0) return;
-            let btn = document.getElementById('playBtn');
-            if(isPlaying) {
-                clearInterval(timer);
-                isPlaying = false;
-                btn.innerText = "Play";
-                btn.style.background = "#22c55e";
+                let timeline = document.getElementById('timeline');
+                timeline.max = frames.length - 1;
+                timeline.value = 0;
+                currentIndex = 0;
+                showFrame(0);
             } else {
-                isPlaying = true;
-                btn.innerText = "Pause";
-                btn.style.background = "#ef4444";
-                startTimer();
+                status.innerText = "❌ " + (data.error || "No se obtuvieron datos.");
             }
+        } catch (err) {
+            status.innerText = "❌ Error de conexión con el servidor.";
         }
+    }
 
-        // Cargar WISE 0855 automáticamente al abrir para demo instantánea
-        window.onload = () => { loadTarget(); };
-    </script>
+    function showFrame(index) {
+        if(frames.length === 0) return;
+        currentIndex = index;
+        let imgEl = document.getElementById('blinkImg');
+        imgEl.src = preloadedImages[currentIndex].src;
+        document.getElementById('timeline').value = currentIndex;
+        document.getElementById('frameInfo').innerText = `Época: ${currentIndex + 1} / ${frames.length} (MJD: ${frames[currentIndex].time.toFixed(1)})`;
+    }
+
+    function onTimelineChange(val) {
+        if(isPlaying) togglePlay();
+        showFrame(parseInt(val));
+    }
+
+    function changeSpeed(val) {
+        intervalMs = parseInt(val);
+        document.getElementById('speedLbl').innerText = intervalMs;
+        if(isPlaying) {
+            clearInterval(timer);
+            startTimer();
+        }
+    }
+
+    function changeZoom(val) {
+        currentZoom = parseFloat(val);
+        document.getElementById('zoomLbl').innerText = currentZoom.toFixed(1);
+        applyFilters();
+    }
+
+    function changeContrast(val) {
+        currentContrast = parseInt(val);
+        document.getElementById('contrastLbl').innerText = currentContrast;
+        applyFilters();
+    }
+
+    function applyFilters() {
+        let imgEl = document.getElementById('blinkImg');
+        let invert = document.getElementById('invertCheck').checked ? 'invert(100%)' : 'invert(0%)';
+        imgEl.style.transform = `scale(${currentZoom})`;
+        imgEl.style.filter = `${invert} contrast(${currentContrast}%)`;
+    }
+
+    function toggleDifference() {
+        let isDiff = document.getElementById('diffCheck').checked;
+        let imgEl = document.getElementById('blinkImg');
+        if(isDiff) {
+            imgEl.style.filter += ' hue-rotate(180deg)';
+        } else {
+            applyFilters();
+        }
+    }
+
+    function startTimer() {
+        timer = setInterval(() => {
+            currentIndex = (currentIndex + 1) % frames.length;
+            showFrame(currentIndex);
+        }, intervalMs);
+    }
+
+    function togglePlay() {
+        if(frames.length === 0) return;
+        let btn = document.getElementById('playBtn');
+        if(isPlaying) {
+            clearInterval(timer);
+            isPlaying = false;
+            btn.innerText = "Play";
+            btn.style.background = "#22c55e";
+        } else {
+            isPlaying = true;
+            btn.innerText = "Pause";
+            btn.style.background = "#ef4444";
+            startTimer();
+        }
+    }
+
+    window.onload = () => { loadTarget(); };
+</script>
 </body>
 </html>
